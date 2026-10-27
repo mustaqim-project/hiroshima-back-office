@@ -193,9 +193,13 @@ class ShiftController extends Controller
     public function currentReport(Request $request): JsonResponse
     {
         $user = $request->user();
-        $shift = Shift::where('user_id', $user->id)
-            ->latest('id')
-            ->first();
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id') ?? $request->input('branch_id');
+
+        $query = Shift::where('user_id', $user->id);
+        if ($requestedBranchId) {
+            $query->where('branch_id', $requestedBranchId);
+        }
+        $shift = $query->latest('id')->first();
 
         if (! $shift) {
             return response()->json([
