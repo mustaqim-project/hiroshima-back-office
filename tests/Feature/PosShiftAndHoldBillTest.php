@@ -414,6 +414,31 @@ class PosShiftAndHoldBillTest extends TestCase
     }
 
     /**
+     * Skenario 9b: Force cancel unfinalized orders allows closing shift safely.
+     */
+    public function test_09b_close_shift_with_force_cancel_unfinalized(): void
+    {
+        $shift = $this->shiftService->open($this->branch->id, $this->cashier->id, null, 200000);
+
+        $order = Order::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'order_no' => 'HRS01-POS-TEST-UNFIN-2',
+            'branch_id' => $this->branch->id,
+            'shift_id' => $shift->id,
+            'user_id' => $this->cashier->id,
+            'order_type_id' => $this->orderType->id,
+            'status' => 'open',
+            'business_date' => now('Asia/Jakarta')->toDateString(),
+            'total_amount' => 50000,
+            'client_created_at' => now('Asia/Jakarta'),
+        ]);
+
+        $closed = $this->shiftService->close($shift, 200000, 'manual', null, true);
+        $this->assertEquals('closed', $closed->status);
+        $this->assertEquals('cancelled', $order->fresh()->status);
+    }
+
+    /**
      * Skenario 10: Total kuantitas dan penjualan per menu sesuai dengan transaksi aktual.
      */
     public function test_10_menu_summary_quantities_and_sales_match_actual_transactions(): void

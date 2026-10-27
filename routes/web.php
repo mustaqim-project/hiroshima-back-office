@@ -51,9 +51,13 @@ Route::post('/forgot-pin', [ForgotPinController::class, 'sendPinResetOtp'])->nam
 Route::get('/verify-pin', [ForgotPinController::class, 'showVerifyPinForm'])->name('pin.verify');
 Route::post('/verify-pin', [ForgotPinController::class, 'verifyAndResetPin'])->name('pin.update');
 
+// Public Landing Page (Hiroshima Japanese Street Food)
+Route::get('/welcome', fn() => view('welcome'))->name('welcome');
+
 // Authenticated Back-office Operations
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', fn() => redirect('/'))->name('backoffice.dashboard');
     Route::get('/backoffice', fn() => redirect('/'))->name('backoffice.root');
 
     Route::prefix('backoffice')->group(function () {

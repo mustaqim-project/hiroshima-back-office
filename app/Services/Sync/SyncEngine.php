@@ -214,10 +214,17 @@ class SyncEngine
                         }
                     }
 
-                    // Deduct stock if inventory gate was active at the transaction's client_created_at
-                    if (InventoryGate::isActive($orderBranch->id, $clientCreatedAt)) {
-                        // Inventory stock deduction
-                        // (Deduction logic handles recipe ingredients)
+                    // Resolve resumed hold bill if referenced so it does not remain as open draft
+                    if (!empty($item['resumed_order_id'])) {
+                        $resumedOrder = Order::find($item['resumed_order_id']);
+                        if ($resumedOrder && in_array($resumedOrder->status, ['open', 'on_hold'])) {
+                            $resumedOrder->update([
+                                'status' => 'cancelled',
+                                'void_reason' => 'Diselesaikan via transaksi ' . $order->order_no,
+                                'voided_by' => $order->user_id,
+                                'voided_at' => now('Asia/Jakarta'),
+                            ]);
+                        }
                     }
 
                     return $order;

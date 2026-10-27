@@ -21,6 +21,13 @@ use Illuminate\Support\Facades\DB;
  */
 class ShiftService
 {
+    protected AuditLogger $auditLogger;
+
+    public function __construct(?AuditLogger $auditLogger = null)
+    {
+        $this->auditLogger = $auditLogger ?? app(AuditLogger::class);
+    }
+
     /**
      * Open a new shift for a cashier and device.
      */

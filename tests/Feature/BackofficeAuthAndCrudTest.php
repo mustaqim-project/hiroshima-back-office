@@ -72,7 +72,7 @@ class BackofficeAuthAndCrudTest extends TestCase
 
     public function test_guest_is_redirected_to_login_page(): void
     {
-        $response = $this->get('/');
+        $response = $this->get('/dashboard');
         $response->assertRedirect('/login');
 
         $crudResponse = $this->get('/backoffice/branches');

@@ -206,6 +206,12 @@
                     <x-icon name="key" size="14" /> <span>Lupa PIN Kasir POS? <span style="color: var(--primary); font-weight: 600;">Reset PIN di sini</span></span>
                 </a>
             </div>
+
+            <div style="text-align: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <a href="{{ route('welcome') }}" style="font-size: 13px; color: var(--text-muted); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>← Lihat Menu & Gerai Hiroshima</span>
+                </a>
+            </div>
         </form>
     </div>
     <!-- PWA Service Worker Registration & Install Engine -->

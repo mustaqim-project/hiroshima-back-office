@@ -121,6 +121,7 @@ class ShiftController extends Controller
     {
         $validated = $request->validate([
             'actual_cash' => 'required|integer|min:0',
+            'force_cancel_unfinalized' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -143,7 +144,13 @@ class ShiftController extends Controller
         }
 
         try {
-            $closedShift = $this->shiftService->close($shift, $validated['actual_cash']);
+            $closedShift = $this->shiftService->close(
+                $shift,
+                $validated['actual_cash'],
+                'manual',
+                null,
+                $validated['force_cancel_unfinalized'] ?? false
+            );
             $report = $this->shiftService->generateCloseShiftReport($closedShift);
 
             $this->auditLogger->record('shift.closed', $closedShift, [], [
