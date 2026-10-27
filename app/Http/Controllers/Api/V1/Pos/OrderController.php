@@ -395,12 +395,63 @@ class OrderController extends Controller
         }
     }
 
-    public function void(Request $request, Order $order): JsonResponse
+    /**
+     * List recent transactions for the cashier branch/shift for receipt reprint & void.
+     */
+    public function recent(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
+        if ($requestedBranchId && $canSwitch) {
+            $branchId = (int)$requestedBranchId;
+        } elseif ($user->branch_id) {
+            $branchId = (int)$user->branch_id;
+        } else {
+            $branchId = (int)(Branch::where('is_active', true)->value('id') ?? 1);
+        }
+
+        $shiftId = $request->query('shift_id');
+
+        $query = Order::with([
+            'items.modifiers',
+            'payments.paymentMethod',
+            'user:id,name,username',
+            'orderType:id,name',
+            'table:id,table_no,name',
+        ])
+            ->where('branch_id', $branchId)
+            ->whereIn('status', ['completed', 'voided']);
+
+        if ($shiftId) {
+            $query->where('shift_id', (int)$shiftId);
+        } else {
+            $query->whereDate('client_created_at', '>=', now('Asia/Jakarta')->subDays(2)->toDateString());
+        }
+
+        $orders = $query->latest('id')->limit(50)->get();
+
+        return response()->json([
+            'success' => true,
+            'orders' => $orders,
+        ]);
+    }
+
+    public function void(Request $request, $order): JsonResponse
     {
         $request->validate([
             'pin_void' => 'required|string',
             'reason' => 'required|string|min:3',
         ]);
+
+        if (! ($order instanceof Order)) {
+            $order = is_numeric($order)
+                ? Order::findOrFail((int)$order)
+                : Order::where('order_no', $order)->orWhere('uuid', $order)->firstOrFail();
+        }
 
         if ($order->status === 'voided') {
             return response()->json([
@@ -409,10 +460,17 @@ class OrderController extends Controller
             ], 409);
         }
 
-        $branch = $order->branch ?? Branch::findOrFail(1);
+        $branch = $order->branch ?? Branch::findOrFail($order->branch_id ?? 1);
 
         // Verify PIN Void (FSD-08)
-        $this->pinService->verify($branch, 'void', $request->pin_void, null, $request->reason);
+        try {
+            $this->pinService->verify($branch, 'void', $request->pin_void, null, $request->reason);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 403);
+        }
 
         DB::transaction(function () use ($order, $request) {
             $order->update([

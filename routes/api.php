@@ -30,6 +30,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders', [OrderController::class, 'store']);
         Route::post('/orders/hold', [OrderController::class, 'hold']);
         Route::get('/orders/held', [OrderController::class, 'heldOrders']);
+        Route::get('/orders/recent', [OrderController::class, 'recent']);
         Route::post('/orders/{id}/resume', [OrderController::class, 'resume']);
         Route::post('/orders/{id}/cancel-hold', [OrderController::class, 'cancelHold']);
         Route::post('/orders/{order}/void', [OrderController::class, 'void']);

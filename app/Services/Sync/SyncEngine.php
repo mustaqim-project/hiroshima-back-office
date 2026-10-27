@@ -239,6 +239,7 @@ class SyncEngine
                 $results[] = [
                     'uuid' => $uuid,
                     'status' => $evaluation['status'],
+                    'order_id' => $order->id,
                     'order_no' => $order->order_no,
                     'flags' => $evaluation['flags'],
                 ];
