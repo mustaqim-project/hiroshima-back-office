@@ -5,78 +5,59 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\CashBook;
-use App\Models\Order;
-use App\Models\Payment;
-use App\Models\Shift;
+use App\Services\ReportExcelService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * @req RPT-01, RPT-02, RPT-03, RPT-04, RPT-05, RPT-06, RPT-07, RPT-08, RPT-09, RPT-10, RPT-11, RPT-12, RPT-13, RPT-14, RPT-15, RPT-16, RPT-17, RPT-18, RPT-19, RPT-20, RPT-21, RPT-22, RPT-23, FR-WEB-04, FSD-15
  */
 class ReportController extends Controller
 {
-    public function index(Request $request): View|Response
+    public function __construct(
+        protected ReportExcelService $reportExcelService
+    ) {}
+
+    public function index(Request $request): View|StreamedResponse
     {
         $reportType = $request->query('type', 'RPT-01');
         $branchId = $request->query('branch_id');
         $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
         $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 
+        // Handle inline query exports
+        $exportMode = $request->query('export');
+        if ($exportMode === 'package') {
+            return $this->reportExcelService->exportFullPackage($startDate, $endDate, $branchId);
+        }
+
+        if (in_array($exportMode, ['single', 'excel', 'xlsx', 'csv'])) {
+            return $this->reportExcelService->exportSingleReport($reportType, $startDate, $endDate, $branchId);
+        }
+
         $branches = Branch::where('is_active', true)->get();
+        $summary = $this->reportExcelService->getOverviewData($startDate, $endDate, $branchId);
+        $activeReportData = $this->reportExcelService->getReportDataset($reportType, $startDate, $endDate, $branchId);
 
-        // 1. Cash Book Data
-        $cashQuery = CashBook::with(['branch', 'creator'])
-            ->whereDate('transaction_date', '>=', $startDate)
-            ->whereDate('transaction_date', '<=', $endDate);
+        // Cash category breakdown for RPT-FIN
+        $cashBreakdown = [];
+        if ($reportType === 'RPT-FIN') {
+            $cashQuery = CashBook::query()
+                ->whereDate('transaction_date', '>=', $startDate)
+                ->whereDate('transaction_date', '<=', $endDate);
+            if ($branchId === 'global') {
+                $cashQuery->whereNull('branch_id');
+            } elseif ($branchId && $branchId !== 'all') {
+                $cashQuery->where('branch_id', $branchId);
+            }
 
-        if ($branchId === 'global') {
-            $cashQuery->whereNull('branch_id');
-        } elseif ($branchId && $branchId !== 'all') {
-            $cashQuery->where('branch_id', $branchId);
+            $cashBreakdown = $cashQuery
+                ->selectRaw('type, category, SUM(amount) as total_amount, COUNT(*) as count')
+                ->groupBy('type', 'category')
+                ->orderBy('total_amount', 'desc')
+                ->get();
         }
-
-        $cashSummary = [
-            'total_in' => (clone $cashQuery)->where('type', 'in')->sum('amount'),
-            'total_out' => (clone $cashQuery)->where('type', 'out')->sum('amount'),
-        ];
-        $cashSummary['net_cash'] = $cashSummary['total_in'] - $cashSummary['total_out'];
-
-        $cashBreakdown = (clone $cashQuery)
-            ->selectRaw('type, category, SUM(amount) as total_amount, COUNT(*) as count')
-            ->groupBy('type', 'category')
-            ->orderBy('total_amount', 'desc')
-            ->get();
-
-        $cashBookEntries = (clone $cashQuery)->orderBy('transaction_date', 'desc')->paginate(25);
-
-        // Handle CSV Export for Cash Book
-        if ($request->query('export') === 'csv' && $reportType === 'RPT-FIN') {
-            return $this->exportCashBookCsv($cashQuery->get(), $startDate, $endDate);
-        }
-
-        // 2. POS Orders Data
-        $query = Order::query()
-            ->whereBetween('business_date', [$startDate, $endDate]);
-
-        if ($branchId) {
-            $query->where('branch_id', $branchId);
-        }
-
-        $summary = [
-            'total_sales' => (clone $query)->where('status', 'completed')->sum('total_amount'),
-            'total_orders' => (clone $query)->where('status', 'completed')->count(),
-            'total_tax' => (clone $query)->where('status', 'completed')->sum('tax_amount'),
-            'total_discount' => (clone $query)->where('status', 'completed')->sum('manual_discount_amount'),
-            'total_void' => (clone $query)->where('status', 'voided')->count(),
-            'total_void_amount' => (clone $query)->where('status', 'voided')->sum('total_amount'),
-            'total_cash_in' => $cashSummary['total_in'],
-            'total_cash_out' => $cashSummary['total_out'],
-            'net_profit_estimate' => (clone $query)->where('status', 'completed')->sum('total_amount') - $cashSummary['total_out'],
-        ];
-
-        $orders = (clone $query)->with(['items', 'orderType', 'branch'])->latest('id')->paginate(20);
 
         return view('backoffice.reports.index', compact(
             'reportType',
@@ -84,32 +65,33 @@ class ReportController extends Controller
             'startDate',
             'endDate',
             'summary',
-            'orders',
-            'cashSummary',
-            'cashBreakdown',
-            'cashBookEntries'
+            'activeReportData',
+            'cashBreakdown'
         ));
     }
 
-    protected function exportCashBookCsv($entries, string $start, string $end): Response
+    /**
+     * Export active single report as 2-sheet formatted Excel workbook
+     */
+    public function exportSingle(Request $request): StreamedResponse
     {
-        $filename = "Laporan_Buku_Kas_{$start}_{$end}.csv";
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
+        $reportType = $request->query('type', 'RPT-01');
+        $branchId = $request->query('branch_id');
+        $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
+        $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 
-        $output = "\xEF\xBB\xBF"; // UTF-8 BOM for Excel
-        $output .= "ID,Tanggal,Cabang,Jenis Arus,Kategori,Keterangan,Nominal (Rp),Petugas\n";
+        return $this->reportExcelService->exportSingleReport($reportType, $startDate, $endDate, $branchId);
+    }
 
-        foreach ($entries as $e) {
-            $type = $e->type === 'in' ? 'Uang Masuk' : 'Uang Keluar';
-            $branch = $e->branch ? $e->branch->name : 'Global (Kantor Pusat)';
-            $desc = '"' . str_replace('"', '""', $e->description ?? '') . '"';
-            $creator = $e->creator->name ?? '-';
-            $output .= "{$e->id},{$e->transaction_date->format('Y-m-d')},{$branch},{$type},{$e->category},{$desc},{$e->amount},{$creator}\n";
-        }
+    /**
+     * Export all reports as a comprehensive multi-sheet Excel package
+     */
+    public function exportPackage(Request $request): StreamedResponse
+    {
+        $branchId = $request->query('branch_id');
+        $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
+        $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 
-        return response($output, 200, $headers);
+        return $this->reportExcelService->exportFullPackage($startDate, $endDate, $branchId);
     }
 }

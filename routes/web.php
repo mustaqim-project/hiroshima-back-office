@@ -83,8 +83,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/reconciliation', [ReconciliationController::class, 'index'])->name('reconciliation.index');
         Route::post('/reconciliation/{shift}', [ReconciliationController::class, 'reconcile'])->name('reconciliation.reconcile');
 
-        // 23 Laporan Komprehensif
+        // 23 Laporan Komprehensif & Ekspor Excel (Single & Multi-Sheet Full Package)
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export-single', [ReportController::class, 'exportSingle'])->name('reports.export.single');
+        Route::get('/reports/export-package', [ReportController::class, 'exportPackage'])->name('reports.export.package');
 
         // Deteksi Fraud & Kasus Kecurangan (EXT)
         Route::get('/fraud', [FraudController::class, 'index'])->name('fraud.index');
