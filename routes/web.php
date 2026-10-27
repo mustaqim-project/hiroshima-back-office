@@ -54,6 +54,7 @@ Route::post('/verify-pin', [ForgotPinController::class, 'verifyAndResetPin'])->n
 // Authenticated Back-office Operations
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/backoffice', fn() => redirect('/'))->name('backoffice.root');
 
     Route::prefix('backoffice')->group(function () {
         // Sistem Ekspor, Unduh Template, dan Impor Spreadsheet (Excel / CSV)

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "name": "Hiroshima Back Office",
+  "short_name": "Hiroshima",
+  "description": "Sistem Manajemen Back Office, POS Kasir, Laporan & Operasional Hiroshima Japanese Street Food",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#dc2626",
+  "background_color": "#0f172a",
+  "lang": "id",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity", "food"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard Ringkasan",
+      "short_name": "Dashboard",
+      "description": "Lihat analitik penjualan dan omzet real-time",
+      "url": "/backoffice/dashboard?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Laporan Keuangan & POS",
+      "short_name": "Laporan",
+      "description": "Audit dan ekspor laporan penjualan serta rekonsiliasi kas",
+      "url": "/backoffice/reports?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Buku Kas & Arus Kas",
+      "short_name": "Buku Kas",
+      "description": "Catat pemasukan dan pengeluaran kas operasional",
+      "url": "/backoffice/cash-book?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Katalog Menu & Produk",
+      "short_name": "Produk",
+      "description": "Kelola menu, varian, dan harga",
+      "url": "/backoffice/products?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

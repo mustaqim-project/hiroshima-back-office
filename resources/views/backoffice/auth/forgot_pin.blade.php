@@ -7,8 +7,20 @@
     @if(\App\Models\Setting::getFaviconUrl())
         <link rel="icon" type="image/x-icon" href="{{ \App\Models\Setting::getFaviconUrl() }}">
     @else
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     @endif
+    <!-- PWA & Mobile Web Capabilities -->
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Hiroshima">
+    <meta name="application-name" content="Hiroshima Back Office">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('icons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}">
     <style>
         :root {
             --primary: #dc2626;
@@ -165,5 +177,7 @@
 
         <a href="{{ route('login') }}" class="back-link">← Kembali ke Halaman Masuk</a>
     </div>
+    <!-- PWA Service Worker Registration & Install Engine -->
+    <script defer src="{{ asset('pwa-register.js') }}"></script>
 </body>
 </html>

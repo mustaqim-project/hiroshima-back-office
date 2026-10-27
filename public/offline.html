@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#dc2626">
+    <title>Koneksi Terputus - Hiroshima Back Office</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <style>
+        :root {
+            --primary: #dc2626;
+            --primary-hover: #b91c1c;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f8fafc;
+                --card-bg: #ffffff;
+                --border: #e2e8f0;
+                --text-main: #0f172a;
+                --text-muted: #64748b;
+            }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .offline-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            max-width: 440px;
+            width: 100%;
+            padding: 40px 32px;
+            text-align: center;
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3);
+        }
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: rgba(220, 38, 38, 0.12);
+            border: 2px dashed rgba(220, 38, 38, 0.4);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+        .icon-container svg {
+            width: 40px;
+            height: 40px;
+        }
+        h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 10px;
+        }
+        p {
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: var(--text-muted);
+            margin-bottom: 28px;
+        }
+        .btn-retry {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: var(--primary);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+        }
+        .btn-retry:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        .status-badge {
+            margin-top: 20px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444;
+            display: inline-block;
+        }
+        .status-dot.online {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <div class="icon-container">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.828-5.657m0 0L3 3m2.464 5.464a5 5 0 011.414-2.828" />
+            </svg>
+        </div>
+        <h1>Koneksi Terputus</h1>
+        <p>Anda sedang berada di luar jangkauan jaringan. Pastikan perangkat terhubung ke Wi-Fi atau data seluler untuk menyinkronkan data Back Office Hiroshima.</p>
+        <button class="btn-retry" onclick="retryConnection()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Coba Sambungkan Kembali
+        </button>
+        <div class="status-badge" id="statusBadge">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Mode Offline Aktif</span>
+        </div>
+    </div>
+
+    <script>
+        function retryConnection() {
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                const btn = document.querySelector('.btn-retry');
+                btn.style.opacity = '0.7';
+                setTimeout(() => { btn.style.opacity = '1'; }, 500);
+            }
+        }
+
+        window.addEventListener('online', () => {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            dot.classList.add('online');
+            txt.innerText = 'Terhubung Kembali! Memuat data...';
+            setTimeout(() => {
+                window.location.reload();
+            }, 600);
+        });
+
+        window.addEventListener('offline', () => {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            dot.classList.remove('online');
+            txt.innerText = 'Mode Offline Aktif';
+        });
+    </script>
+</body>
+</html>
