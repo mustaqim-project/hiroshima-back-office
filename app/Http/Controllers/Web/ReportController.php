@@ -11,7 +11,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * @req RPT-01, RPT-02, RPT-03, RPT-04, RPT-05, RPT-06, RPT-07, RPT-08, RPT-09, RPT-10, RPT-11, RPT-12, RPT-13, RPT-14, RPT-15, RPT-16, RPT-17, RPT-18, RPT-19, RPT-20, RPT-21, RPT-22, RPT-23, FR-WEB-04, FSD-15
+ * @req RPT-FIN, RPT-01, RPT-02, RPT-03, RPT-04, RPT-05, RPT-06, RPT-07, RPT-08, RPT-09, RPT-10, RPT-11, RPT-12, RPT-17, RPT-21, RPT-22, RPT-23, RPT-24, FR-WEB-04, FSD-15
  */
 class ReportController extends Controller
 {
@@ -21,12 +21,22 @@ class ReportController extends Controller
 
     public function index(Request $request): View|StreamedResponse
     {
+        $availableReports = ReportExcelService::getAvailableReports();
         $reportType = $request->query('type', 'RPT-01');
+        if (!isset($availableReports[$reportType])) {
+            $reportType = 'RPT-01';
+        }
+
         $branchId = $request->query('branch_id');
+        $user = $request->user();
+        if ($user && $user->branch_id && !in_array($user->role, ['owner', 'admin'])) {
+            $branchId = (string) $user->branch_id;
+        }
+
         $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
         $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 
-        // Handle inline query exports
+        // Handle inline query exports (?export=package or ?export=single)
         $exportMode = $request->query('export');
         if ($exportMode === 'package') {
             return $this->reportExcelService->exportFullPackage($startDate, $endDate, $branchId);
@@ -60,10 +70,12 @@ class ReportController extends Controller
         }
 
         return view('backoffice.reports.index', compact(
+            'availableReports',
             'reportType',
             'branches',
             'startDate',
             'endDate',
+            'branchId',
             'summary',
             'activeReportData',
             'cashBreakdown'
@@ -75,8 +87,18 @@ class ReportController extends Controller
      */
     public function exportSingle(Request $request): StreamedResponse
     {
+        $availableReports = ReportExcelService::getAvailableReports();
         $reportType = $request->query('type', 'RPT-01');
+        if (!isset($availableReports[$reportType])) {
+            $reportType = 'RPT-01';
+        }
+
         $branchId = $request->query('branch_id');
+        $user = $request->user();
+        if ($user && $user->branch_id && !in_array($user->role, ['owner', 'admin'])) {
+            $branchId = (string) $user->branch_id;
+        }
+
         $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
         $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 
@@ -89,6 +111,11 @@ class ReportController extends Controller
     public function exportPackage(Request $request): StreamedResponse
     {
         $branchId = $request->query('branch_id');
+        $user = $request->user();
+        if ($user && $user->branch_id && !in_array($user->role, ['owner', 'admin'])) {
+            $branchId = (string) $user->branch_id;
+        }
+
         $startDate = $request->query('start_date', now('Asia/Jakarta')->startOfMonth()->toDateString());
         $endDate = $request->query('end_date', now('Asia/Jakarta')->toDateString());
 

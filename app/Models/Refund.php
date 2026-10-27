@@ -41,4 +41,9 @@ class Refund extends Model
     {
         return $this->belongsTo(Shift::class);
     }
+
+    public function authorizedByUser()
+    {
+        return $this->belongsTo(User::class, 'authorized_by_user_id');
+    }
 }

@@ -1,29 +1,33 @@
-@extends('layouts.app', ['title' => 'Laporan Bisnis & Finance'])
+@extends('layouts.app', ['title' => 'Laporan Bisnis & Analitik'])
 
 @section('content')
 <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Pusat Laporan Bisnis & Analitik (Reports Center)</h2>
-        <p style="color: var(--text-muted); font-size: 14px;">Laporan analitik penjualan POS, laba rugi F&B, rekonsiliasi shift, arus kas, dan audit log komprehensif.</p>
+        <p style="color: var(--text-muted); font-size: 14px;">Laporan komprehensif operasional POS, buku kas keuangan, pajak PB1, rekonsiliasi kasir, analisis menu, dan audit keamanan.</p>
     </div>
 
     <!-- Export Action Buttons -->
     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         <!-- Single Report Export -->
-        <a href="{{ Route::has('reports.export.single') ? route('reports.export.single', array_merge(request()->query(), ['type' => $reportType])) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'single', 'type' => $reportType]))) }}" 
+        <a id="btnExportSingle"
+           href="{{ Route::has('reports.export.single') ? route('reports.export.single', array_merge(request()->query(), ['type' => $reportType])) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'single', 'type' => $reportType]))) }}" 
+           onclick="handleExportClick(this, 'Mengunduh {{ $reportType }}...')"
            class="btn btn-primary" 
-           style="background: #047857; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: none; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);">
+           style="background: #047857; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: none; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2); transition: all 0.2s ease;">
             <x-icon name="download" size="15" />
-            <span>Export Laporan Ini (.xlsx)</span>
+            <span class="btn-label">Export Laporan Ini (.xlsx)</span>
         </a>
 
         <!-- Full Package Multi-Sheet Export -->
-        <a href="{{ Route::has('reports.export.package') ? route('reports.export.package', request()->query()) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'package']))) }}" 
+        <a id="btnExportPackage"
+           href="{{ Route::has('reports.export.package') ? route('reports.export.package', request()->query()) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'package']))) }}" 
+           onclick="handleExportClick(this, 'Menyiapkan Full Package...')"
            class="btn btn-primary" 
-           style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);">
+           style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); transition: all 0.2s ease;">
             <x-icon name="archive" size="15" />
-            <span>Export Full Package (Multi-Sheet .xlsx)</span>
-            <span style="background: #F59E0B; color: #78350F; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 10px; letter-spacing: 0.05em; text-transform: uppercase;">12 Sheet</span>
+            <span class="btn-label">Export Full Package (Multi-Sheet .xlsx)</span>
+            <span style="background: #F59E0B; color: #78350F; font-size: 10px; font-weight: 900; padding: 1px 7px; border-radius: 10px; letter-spacing: 0.05em; text-transform: uppercase;">19 Sheet</span>
         </a>
     </div>
 </div>
@@ -31,27 +35,28 @@
 <!-- Filters Bar -->
 <div class="card" style="margin-bottom: 20px;">
     <form method="GET" action="{{ route('reports.index') }}" id="reportFilterForm" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
-        <div style="flex: 2; min-width: 280px;">
+        <div style="flex: 2; min-width: 320px;">
             <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Pilih Jenis Laporan</label>
             <select name="type" onchange="document.getElementById('reportFilterForm').submit()" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-weight: 600; background: var(--bg-card); color: var(--text);">
-                <option value="RPT-01" {{ $reportType === 'RPT-01' ? 'selected' : '' }}>RPT-01: Ringkasan Penjualan & Finansial POS</option>
-                <option value="RPT-02" {{ $reportType === 'RPT-02' ? 'selected' : '' }}>RPT-02: Penjualan per Menu (Menu Sales)</option>
-                <option value="RPT-03" {{ $reportType === 'RPT-03' ? 'selected' : '' }}>RPT-03: Penjualan per Kategori (Category Sales)</option>
-                <option value="RPT-04" {{ $reportType === 'RPT-04' ? 'selected' : '' }}>RPT-04: Metode Pembayaran (Payment Methods)</option>
-                <option value="RPT-05" {{ $reportType === 'RPT-05' ? 'selected' : '' }}>RPT-05: Penjualan per Jenis Order (Order Types)</option>
-                <option value="RPT-06" {{ $reportType === 'RPT-06' ? 'selected' : '' }}>RPT-06: Laporan Void & Refund (Loss Prevention)</option>
-                <option value="RPT-07" {{ $reportType === 'RPT-07' ? 'selected' : '' }}>RPT-07: Diskon & Promosi (Discounts & Vouchers)</option>
-                <option value="RPT-08" {{ $reportType === 'RPT-08' ? 'selected' : '' }}>RPT-08: Pajak Restoran & Service Charge (PB1)</option>
-                <option value="RPT-09" {{ $reportType === 'RPT-09' ? 'selected' : '' }}>RPT-09: Shift & Rekonsiliasi Kas (Drawer Cash)</option>
-                <option value="RPT-17" {{ $reportType === 'RPT-17' ? 'selected' : '' }}>RPT-17: Produktivitas Kasir (Cashier Performance)</option>
-                <option value="RPT-21" {{ $reportType === 'RPT-21' ? 'selected' : '' }}>RPT-21: Pengeluaran Biaya Operasional (Expenses)</option>
-                <option value="RPT-22" {{ $reportType === 'RPT-22' ? 'selected' : '' }}>RPT-22: Estimasi Laba Rugi F&B (P&L Income Statement)</option>
-                <option value="RPT-23" {{ $reportType === 'RPT-23' ? 'selected' : '' }}>RPT-23: Integritas Rantai Audit Log (Hash Trail)</option>
-                <option value="RPT-FIN" {{ $reportType === 'RPT-FIN' ? 'selected' : '' }} style="font-weight: 800; color: #047857;">RPT-FIN: Laporan Buku Kas & Arus Keuangan (Ledger)</option>
+                @php
+                    $groupedReports = [];
+                    foreach ($availableReports as $code => $rDef) {
+                        $groupedReports[$rDef['category']][$code] = $rDef;
+                    }
+                @endphp
+                @foreach($groupedReports as $catName => $rList)
+                    <optgroup label="—— {{ $catName }} ——">
+                        @foreach($rList as $c => $r)
+                            <option value="{{ $c }}" {{ $reportType === $c ? 'selected' : '' }}>
+                                {{ $r['code'] }}: {{ $r['name'] }}
+                            </option>
+                        @endforeach
+                    </optgroup>
+                @endforeach
             </select>
         </div>
 
-        <div style="flex: 1; min-width: 180px;">
+        <div style="flex: 1; min-width: 190px;">
             <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Filter Cabang / Lingkup</label>
             <select name="branch_id" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text);">
                 <option value="">Semua (Cabang & Global)</option>
@@ -93,17 +98,17 @@
     <div class="stat-card" style="border-left: 4px solid #2563EB;">
         <div class="stat-label">Total Omzet Penjualan POS</div>
         <div class="stat-value" style="color: #2563EB;">Rp {{ number_format($summary['total_sales'], 0, ',', '.') }}</div>
-        <div class="stat-desc">{{ $summary['total_orders'] }} transaksi lunas tercatat</div>
+        <div class="stat-desc">{{ $summary['total_orders'] }} transaksi struk lunas</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #16A34A;">
         <div class="stat-label">Total Uang Masuk Buku Kas</div>
         <div class="stat-value" style="color: #16A34A;">+ Rp {{ number_format($summary['total_cash_in'], 0, ',', '.') }}</div>
-        <div class="stat-desc">Suntikan modal & penerimaan kas</div>
+        <div class="stat-desc">Suntikan modal & setoran operasional</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid #DC2626;">
         <div class="stat-label">Total Uang Keluar Buku Kas</div>
         <div class="stat-value" style="color: #DC2626;">- Rp {{ number_format($summary['total_cash_out'], 0, ',', '.') }}</div>
-        <div class="stat-desc">Belanja bahan baku, gas, sewa, upah</div>
+        <div class="stat-desc">Bumbu, gas, sewa, gaji, perlengkapan</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid {{ $summary['net_profit_estimate'] >= 0 ? '#059669' : '#DC2626' }};">
         <div class="stat-label">Estimasi Arus Kas Bersih</div>
@@ -167,6 +172,9 @@
                 <span>{{ $activeReportData['title'] }}</span>
             </div>
             <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                {{ $availableReports[$reportType]['description'] ?? '' }}
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                 Periode: <strong>{{ date('d M Y', strtotime($startDate)) }}</strong> s/d <strong>{{ date('d M Y', strtotime($endDate)) }}</strong> · Lingkup: <strong>{{ request('branch_id') ? (request('branch_id') === 'global' ? 'Global Pusat' : 'Cabang Terpilih') : 'Semua Cabang' }}</strong>
             </div>
         </div>
@@ -193,8 +201,15 @@
                                     || str_contains(strtolower($headerText), 'diskon')
                                     || str_contains(strtolower($headerText), 'selisih')
                                     || str_contains(strtolower($headerText), 'margin')
+                                    || str_contains(strtolower($headerText), 'beban')
+                                    || str_contains(strtolower($headerText), 'harga')
+                                    || str_contains(strtolower($headerText), 'dpp')
+                                    || str_contains(strtolower($headerText), 'service')
                                     || str_contains(strtolower($headerText), 'kontribusi');
-                            $isCenter = str_contains(strtolower($headerText), 'no') && strlen($headerText) <= 4;
+                            $isCenter = (str_contains(strtolower($headerText), 'no') && strlen($headerText) <= 4)
+                                     || str_contains(strtolower($headerText), 'status')
+                                     || str_contains(strtolower($headerText), 'jam')
+                                     || str_contains(strtolower($headerText), 'tanggal');
                         @endphp
                         <th style="{{ $isRight ? 'text-align: right;' : ($isCenter ? 'text-align: center;' : 'text-align: left;') }}">
                             {{ $headerText }}
@@ -227,15 +242,26 @@
                                             || str_contains(strtolower($headerCol), 'pajak')
                                             || str_contains(strtolower($headerCol), 'diskon')
                                             || str_contains(strtolower($headerCol), 'selisih')
+                                            || str_contains(strtolower($headerCol), 'beban')
+                                            || str_contains(strtolower($headerCol), 'harga')
+                                            || str_contains(strtolower($headerCol), 'dpp')
+                                            || str_contains(strtolower($headerCol), 'service')
                                             || str_contains(strtolower($headerCol), 'kas'));
-                                    $isCenter = $cIdx === 0 && strlen((string)$cell) <= 4;
-                                    $isRight = $isNumericMoney || (is_numeric($cell) && str_contains(strtolower($headerCol), 'qty')) || str_contains((string)$cell, '%');
+                                    $isCenter = ($cIdx === 0 && strlen((string)$cell) <= 4)
+                                             || str_contains(strtolower($headerCol), 'jam')
+                                             || str_contains(strtolower($headerCol), 'status')
+                                             || str_contains(strtolower($headerCol), 'tanggal');
+                                    $isRight = $isNumericMoney 
+                                            || (is_numeric($cell) && (str_contains(strtolower($headerCol), 'qty') || str_contains(strtolower($headerCol), 'jumlah') || str_contains(strtolower($headerCol), 'frekuensi'))) 
+                                            || str_contains((string)$cell, '%');
                                 @endphp
                                 <td style="{{ $isRight ? 'text-align: right;' : ($isCenter ? 'text-align: center;' : 'text-align: left;') }}">
-                                    @if($cell === 'Lunas' || $cell === 'Aktif' || $cell === 'Uang Masuk')
+                                    @if($cell === 'Lunas' || $cell === 'Aktif' || $cell === 'Uang Masuk' || $cell === 'Tutup & Rekonsiliasi' || $cell === 'Rantai Terverifikasi Utuh')
                                         <span class="badge badge-success">{{ $cell }}</span>
-                                    @elseif($cell === 'Void' || $cell === 'Uang Keluar')
+                                    @elseif($cell === 'Void' || $cell === 'Uang Keluar' || str_contains((string)$cell, 'KRITIS') || str_contains((string)$cell, 'Batal'))
                                         <span class="badge badge-danger">{{ $cell }}</span>
+                                    @elseif(str_contains((string)$cell, 'TINGGI') || str_contains((string)$cell, 'SEDANG'))
+                                        <span class="badge badge-warning" style="background: #FEF3C7; color: #92400E;">{{ $cell }}</span>
                                     @elseif($isNumericMoney)
                                         <strong style="font-variant-numeric: tabular-nums;">
                                             @if($cell < 0)
@@ -246,7 +272,7 @@
                                                 -
                                             @endif
                                         </strong>
-                                    @elseif(is_numeric($cell) && str_contains(strtolower($headerCol), 'qty'))
+                                    @elseif(is_numeric($cell) && (str_contains(strtolower($headerCol), 'qty') || str_contains(strtolower($headerCol), 'jumlah')))
                                         <span style="font-weight: 600; font-variant-numeric: tabular-nums;">{{ number_format($cell, 0, ',', '.') }}</span>
                                     @else
                                         {{ $cell ?? '-' }}
@@ -281,8 +307,12 @@
                                     || str_contains(strtolower($headerCol), 'pajak')
                                     || str_contains(strtolower($headerCol), 'diskon')
                                     || str_contains(strtolower($headerCol), 'selisih')
+                                    || str_contains(strtolower($headerCol), 'beban')
+                                    || str_contains(strtolower($headerCol), 'harga')
+                                    || str_contains(strtolower($headerCol), 'dpp')
+                                    || str_contains(strtolower($headerCol), 'service')
                                 );
-                                $isRight = $isNumericMoney || (is_numeric($totCell) && str_contains(strtolower($headerCol), 'qty')) || str_contains((string)$totCell, '%');
+                                $isRight = $isNumericMoney || (is_numeric($totCell) && (str_contains(strtolower($headerCol), 'qty') || str_contains(strtolower($headerCol), 'jumlah'))) || str_contains((string)$totCell, '%');
                             @endphp
                             <td style="{{ $isRight ? 'text-align: right;' : 'text-align: left;' }}; font-size: 13px; color: #0F172A; padding: 12px 14px;">
                                 @if($isNumericMoney)
@@ -312,6 +342,18 @@ function setDateRange(start, end) {
     document.getElementById('startDateInput').value = start;
     document.getElementById('endDateInput').value = end;
     document.getElementById('reportFilterForm').submit();
+}
+
+function handleExportClick(btn, loadingText) {
+    var originalHtml = btn.innerHTML;
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.75';
+    btn.innerHTML = '<span>' + loadingText + '</span>';
+    setTimeout(function() {
+        btn.innerHTML = originalHtml;
+        btn.style.pointerEvents = 'auto';
+        btn.style.opacity = '1';
+    }, 4500);
 }
 </script>
 @endsection
