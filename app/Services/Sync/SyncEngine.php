@@ -63,7 +63,7 @@ class SyncEngine
             'payment_methods' => PaymentMethod::where('is_active', true)
                 ->whereHas('branchPaymentMethods', fn ($q) => $q->where('branch_id', $branch->id)->where('is_active', true))
                 ->get(),
-            'products' => Product::with(['variants', 'modifierGroups.modifiers'])->where('is_active', true)->get(),
+            'products' => Product::with(['variants', 'modifierGroups.modifiers', 'prices'])->where('is_active', true)->get(),
             'product_prices' => ProductPrice::where(function ($q) use ($branch) {
                 $q->where('branch_id', $branch->id)->orWhereNull('branch_id');
             })->get(),

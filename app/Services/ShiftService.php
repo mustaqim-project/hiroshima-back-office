@@ -78,7 +78,7 @@ class ShiftService
      * Close a shift manually by cashier with physical cash count.
      * Validates that no Hold Bills or uncompleted checkouts remain open.
      */
-    public function close(Shift $shift, int $actualCash, string $closeType = 'manual', ?string $reason = null): Shift
+    public function close(Shift $shift, int $actualCash, string $closeType = 'manual', ?string $reason = null, bool $cancelUnfinalized = false): Shift
     {
         // 1. Validate: No open Hold Bills on this shift
         $openHoldBills = Order::where('shift_id', $shift->id)
@@ -98,10 +98,25 @@ class ShiftService
             ->get();
 
         if ($unfinalizedOrders->isNotEmpty()) {
-            throw new UnfinalizedTransactionException(
-                "Tidak dapat menutup shift. Masih terdapat {$unfinalizedOrders->count()} transaksi dengan pembayaran yang belum selesai diproses.",
-                $unfinalizedOrders
-            );
+            if ($cancelUnfinalized) {
+                foreach ($unfinalizedOrders as $unf) {
+                    $unf->update([
+                        'status' => 'cancelled',
+                        'void_reason' => 'Dibatalkan otomatis saat penutupan shift kasir.',
+                        'voided_by' => auth()->id() ?? $shift->user_id,
+                        'voided_at' => now('Asia/Jakarta'),
+                    ]);
+                    $this->auditLogger->record('order.cancelled_on_shift_close', $unf, ['status' => 'open'], [
+                        'status' => 'cancelled',
+                        'shift_id' => $shift->id,
+                    ]);
+                }
+            } else {
+                throw new UnfinalizedTransactionException(
+                    "Tidak dapat menutup shift. Masih terdapat {$unfinalizedOrders->count()} transaksi dengan pembayaran yang belum selesai diproses.",
+                    $unfinalizedOrders
+                );
+            }
         }
 
         $expectedCash = $this->calculateExpectedCash($shift);
