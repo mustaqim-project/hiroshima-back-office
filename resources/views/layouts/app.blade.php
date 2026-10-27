@@ -447,7 +447,6 @@
             <li class="nav-section-label">PENGATURAN</li>
             <li><a href="{{ route('settings.general') }}" class="nav-link {{ request()->routeIs('settings.general*') ? 'active' : '' }}"><x-icon name="settings" size="18" /> <span>Pengaturan Umum</span></a></li>
             <li><a href="{{ route('settings.smtp') }}" class="nav-link {{ request()->routeIs('settings.smtp*') ? 'active' : '' }}"><x-icon name="mail" size="18" /> <span>Email & SMTP</span></a></li>
-            <li><a href="{{ route('app.download.page') }}" class="nav-link {{ request()->routeIs('app.download*') ? 'active' : '' }}"><x-icon name="download" size="18" /> <span>Unduh Aplikasi POS</span></a></li>
             <li id="sidebar-pwa-item" style="display: none;">
                 <a href="javascript:void(0)" onclick="window.hiroshimaInstallPWA && window.hiroshimaInstallPWA()" class="nav-link" style="color: #38bdf8;">
                     <x-icon name="smartphone" size="18" /> <span>Pasang PWA Backoffice</span>
