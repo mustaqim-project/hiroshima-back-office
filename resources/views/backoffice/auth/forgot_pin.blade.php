@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lupa PIN Kasir POS - Hiroshima POS</title>
+    <title>Lupa PIN Kasir POS - {{ \App\Models\Setting::getAppName() }}</title>
+    @if(\App\Models\Setting::getFaviconUrl())
+        <link rel="icon" type="image/x-icon" href="{{ \App\Models\Setting::getFaviconUrl() }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
     <style>
         :root {
             --primary: #dc2626;

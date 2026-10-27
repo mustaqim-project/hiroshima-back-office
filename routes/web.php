@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ForgotPasswordController;
 use App\Http\Controllers\Web\ForgotPinController;
 use App\Http\Controllers\Web\FraudController;
+use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\IngredientController;
 use App\Http\Controllers\Web\ModifierGroupController;
 use App\Http\Controllers\Web\OrderTypeController;
@@ -77,6 +78,10 @@ Route::middleware('auth')->group(function () {
 
         // Audit Log Viewer & Integritas Hash Chain
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+        // Pengaturan Sistem (Identitas & Branding)
+        Route::get('/settings/general', [GeneralSettingController::class, 'index'])->name('settings.general');
+        Route::post('/settings/general', [GeneralSettingController::class, 'update'])->name('settings.general.update');
 
         // Pengaturan Sistem (Database SMTP Configuration)
         Route::get('/settings/smtp', [SmtpSettingController::class, 'index'])->name('settings.smtp');

@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Hiroshima POS' }} - Back-office F&B</title>
+    <title>{{ $title ?? \App\Models\Setting::getAppName() }} - {{ \App\Models\Setting::getAppTagline() }}</title>
+    @if(\App\Models\Setting::getFaviconUrl())
+        <link rel="icon" type="image/x-icon" href="{{ \App\Models\Setting::getFaviconUrl() }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
     <!-- System font stack (Self-contained, zero external dependency) -->
     <style>
         :root {
@@ -164,10 +169,14 @@
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="brand">
-            <div class="brand-badge">H</div>
+            @if(\App\Models\Setting::getLogoUrl())
+                <img src="{{ \App\Models\Setting::getLogoUrl() }}" alt="{{ \App\Models\Setting::getAppName() }}" style="max-height: 40px; max-width: 44px; border-radius: 8px; object-fit: contain;">
+            @else
+                <div class="brand-badge">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
+            @endif
             <div class="brand-text">
-                <h1>HIROSHIMA POS</h1>
-                <span>F&B Multi-Cabang</span>
+                <h1>{{ \App\Models\Setting::getAppName() }}</h1>
+                <span title="{{ \App\Models\Setting::getAppTagline() }}">{{ \Illuminate\Support\Str::limit(\App\Models\Setting::getAppTagline(), 22) }}</span>
             </div>
         </div>
 
@@ -192,7 +201,8 @@
             <li><a href="{{ route('audit.index') }}" class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}"><x-icon name="audit" size="18" /> <span>Audit Log Chain</span></a></li>
 
             <li style="padding: 12px 16px 4px; font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: 0.5px;">PENGATURAN SISTEM</li>
-            <li><a href="{{ route('settings.smtp') }}" class="nav-link {{ request()->routeIs('settings.smtp*') ? 'active' : '' }}"><x-icon name="settings" size="18" /> <span>Pengaturan SMTP Mail</span></a></li>
+            <li><a href="{{ route('settings.general') }}" class="nav-link {{ request()->routeIs('settings.general*') ? 'active' : '' }}"><x-icon name="settings" size="18" /> <span>Identitas & Tampilan</span></a></li>
+            <li><a href="{{ route('settings.smtp') }}" class="nav-link {{ request()->routeIs('settings.smtp*') ? 'active' : '' }}"><x-icon name="mail" size="18" /> <span>Pengaturan SMTP Mail</span></a></li>
         </ul>
     </aside>
 
@@ -200,7 +210,7 @@
     <div class="main-content">
         <header class="topbar">
             <div>
-                <strong style="font-size: 14px; color: var(--text-muted);">Pusat Kendali Operasional Hiroshima F&B</strong>
+                <strong style="font-size: 14px; color: var(--text-muted);">{{ \App\Models\Setting::getAppTagline() }}</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 16px;">
                 <span class="badge badge-info">WIB (Asia/Jakarta)</span>
@@ -244,6 +254,11 @@
 
             @yield('content')
         </main>
+
+        <footer style="padding: 16px 32px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; background: #ffffff;">
+            <div>{{ \App\Models\Setting::getFooterText() }}</div>
+            <div>{{ \App\Models\Setting::getCompanyName() }}</div>
+        </footer>
     </div>
 
     @stack('scripts')

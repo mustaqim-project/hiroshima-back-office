@@ -77,4 +77,80 @@ class Setting extends Model
 
         return $result;
     }
+
+    public static function getAppName(): string
+    {
+        try {
+            return (string) static::get('app_name', 'HIROSHIMA POS');
+        } catch (\Throwable) {
+            return 'HIROSHIMA POS';
+        }
+    }
+
+    public static function getAppTagline(): string
+    {
+        try {
+            return (string) static::get('app_tagline', 'Pusat Kendali Operasional F&B Multi-Cabang');
+        } catch (\Throwable) {
+            return 'Pusat Kendali Operasional F&B Multi-Cabang';
+        }
+    }
+
+    public static function getCompanyName(): string
+    {
+        try {
+            return (string) static::get('company_name', 'Hiroshima Japanese Street Food');
+        } catch (\Throwable) {
+            return 'Hiroshima Japanese Street Food';
+        }
+    }
+
+    public static function getLogoUrl(): ?string
+    {
+        try {
+            $logo = static::get('app_logo');
+            if ($logo) {
+                return asset('storage/' . $logo);
+            }
+        } catch (\Throwable) {}
+        return null;
+    }
+
+    public static function getFaviconUrl(): ?string
+    {
+        try {
+            $favicon = static::get('app_favicon');
+            if ($favicon) {
+                return asset('storage/' . $favicon);
+            }
+        } catch (\Throwable) {}
+        return null;
+    }
+
+    public static function getFooterText(): string
+    {
+        try {
+            return (string) static::get('footer_text', '© ' . date('Y') . ' Hiroshima Japanese Street Food. All rights reserved.');
+        } catch (\Throwable) {
+            return '© Hiroshima Japanese Street Food';
+        }
+    }
+
+    public static function getSupportEmail(): string
+    {
+        try {
+            return (string) static::get('support_email', 'hiroshimajapanese@gmail.com');
+        } catch (\Throwable) {
+            return 'hiroshimajapanese@gmail.com';
+        }
+    }
+
+    public static function getSupportPhone(): string
+    {
+        try {
+            return (string) static::get('support_phone', '');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
 }

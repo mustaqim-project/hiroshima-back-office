@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk - Hiroshima POS Back-office</title>
+    <title>Masuk - {{ \App\Models\Setting::getAppName() }} Back-office</title>
+    @if(\App\Models\Setting::getFaviconUrl())
+        <link rel="icon" type="image/x-icon" href="{{ \App\Models\Setting::getFaviconUrl() }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
     <style>
         :root {
             --primary: #dc2626;
@@ -34,6 +39,13 @@
         .brand-header {
             text-align: center;
             margin-bottom: 32px;
+        }
+        .brand-logo-img {
+            max-height: 64px;
+            max-width: 140px;
+            object-fit: contain;
+            margin-bottom: 12px;
+            border-radius: 8px;
         }
         .brand-badge {
             width: 48px;
@@ -124,38 +136,20 @@
             margin-bottom: 20px;
             border: 1px solid #bbf7d0;
         }
-        .demo-box {
-            margin-top: 28px;
-            padding: 16px;
-            background: #f8fafc;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-        .demo-box strong {
-            color: var(--text-main);
-            display: block;
-            margin-bottom: 6px;
-        }
-        .demo-chip {
-            display: inline-block;
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-top: 4px;
-            cursor: pointer;
-            font-family: monospace;
-        }
     </style>
 </head>
 <body>
     <div class="login-card">
         <div class="brand-header">
-            <div class="brand-badge">H</div>
-            <h1 class="brand-title">HIROSHIMA POS</h1>
-            <p class="brand-subtitle">Pusat Kendali Operasional F&B Multi-Cabang</p>
+            @if(\App\Models\Setting::getLogoUrl())
+                <div>
+                    <img src="{{ \App\Models\Setting::getLogoUrl() }}" alt="{{ \App\Models\Setting::getAppName() }}" class="brand-logo-img">
+                </div>
+            @else
+                <div class="brand-badge">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
+            @endif
+            <h1 class="brand-title">{{ \App\Models\Setting::getAppName() }}</h1>
+            <p class="brand-subtitle">{{ \App\Models\Setting::getAppTagline() }}</p>
         </div>
 
         @if($errors->has('login_error'))
@@ -174,12 +168,12 @@
             @csrf
             <div class="form-group">
                 <label class="form-label" for="username_or_email">Username atau Email</label>
-                <input type="text" id="username_or_email" name="username_or_email" class="form-input" value="{{ old('username_or_email', 'hiroshimajapanese@gmail.com') }}" required autofocus placeholder="contoh: hiroshimajapanese@gmail.com atau admin">
+                <input type="text" id="username_or_email" name="username_or_email" class="form-input" value="{{ old('username_or_email') }}" required autofocus placeholder="contoh: admin atau nama@email.com">
             </div>
 
             <div class="form-group">
                 <label class="form-label" for="password">Kata Sandi</label>
-                <input type="password" id="password" name="password" class="form-input" value="password123" required placeholder="Masukkan kata sandi">
+                <input type="password" id="password" name="password" class="form-input" value="" required placeholder="Masukkan kata sandi">
             </div>
 
             <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
@@ -197,14 +191,6 @@
                 </a>
             </div>
         </form>
-
-        <div class="demo-box">
-            <strong>Akun Standar Sistem:</strong>
-            <div>• Admin Utama: <code>hiroshimajapanese@gmail.com</code> (atau <code>admin</code>) / <code>password123</code></div>
-            <div>• Owner: <code>owner@hiroshima.id</code> / <code>password123</code></div>
-            <div>• Kepala Cabang (Cikini): <code>hrs-ckn_spv@hiroshima.id</code> / <code>password123</code></div>
-            <div style="margin-top: 4px; color: #64748b; font-size: 11px;">PIN Default Kasir & Otorisasi: <code>123456</code></div>
-        </div>
     </div>
 </body>
 </html>

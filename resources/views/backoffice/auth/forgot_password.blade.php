@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lupa Kata Sandi - Hiroshima POS</title>
+    <title>Lupa Kata Sandi - {{ \App\Models\Setting::getAppName() }}</title>
+    @if(\App\Models\Setting::getFaviconUrl())
+        <link rel="icon" type="image/x-icon" href="{{ \App\Models\Setting::getFaviconUrl() }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
     <style>
         :root {
             --primary: #dc2626;
@@ -131,7 +136,13 @@
 <body>
     <div class="auth-card">
         <div class="brand-header">
-            <div class="brand-badge">H</div>
+            @if(\App\Models\Setting::getLogoUrl())
+                <div>
+                    <img src="{{ \App\Models\Setting::getLogoUrl() }}" alt="{{ \App\Models\Setting::getAppName() }}" style="max-height: 56px; max-width: 140px; object-fit: contain; margin-bottom: 12px; border-radius: 8px;">
+                </div>
+            @else
+                <div class="brand-badge">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
+            @endif
             <h1 class="brand-title">Lupa Kata Sandi</h1>
             <p class="brand-subtitle">Masukkan username atau alamat email terdaftar Anda. Kami akan mengirimkan tautan reset kata sandi melalui email SMTP.</p>
         </div>
