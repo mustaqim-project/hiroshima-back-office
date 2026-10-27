@@ -46,6 +46,7 @@ class GeneralSettingController extends Controller
             'support_email' => 'nullable|email|max:100',
             'support_phone' => 'nullable|string|max:50',
             'app_apk_url' => 'nullable|url|max:255',
+            'app_apk_file' => 'nullable|file|max:150000',
             'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'app_favicon' => 'nullable|file|mimes:ico,png,svg|max:1024',
             'remove_logo' => 'nullable|boolean',
@@ -129,6 +130,22 @@ class GeneralSettingController extends Controller
             // Mirror to public/storage for environments where symlink is restricted
             try {
                 $publicTarget = public_path('storage/' . $path);
+                if (!file_exists(dirname($publicTarget))) {
+                    @mkdir(dirname($publicTarget), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $publicTarget);
+            } catch (\Throwable) {}
+        }
+
+        // Handle APK File Upload
+        if ($request->hasFile('app_apk_file')) {
+            $file = $request->file('app_apk_file');
+            $filename = 'Hiroshima.apk';
+            $path = $file->storeAs('downloads', $filename, 'public');
+            Setting::set('app_apk_file', $path, 'general');
+
+            try {
+                $publicTarget = public_path('downloads/' . $filename);
                 if (!file_exists(dirname($publicTarget))) {
                     @mkdir(dirname($publicTarget), 0755, true);
                 }

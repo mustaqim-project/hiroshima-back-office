@@ -187,8 +187,17 @@
                     <div class="card-title">5. Installer & Link Unduhan Aplikasi Mobile (Hiroshima)</div>
                 </div>
 
+                <!-- Unggah File APK Langsung -->
+                <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Unggah File Release APK Langsung (.apk)</label>
+                    <input type="file" id="app_apk_file" name="app_apk_file" accept=".apk,application/vnd.android.package-archive" style="font-size: 13px; width: 100%; margin-bottom: 6px;">
+                    <div style="font-size: 11px; color: var(--text-muted);">
+                        Pilih file APK release jika Anda ingin memperbarui file installer langsung melalui browser web (Maks. 150MB).
+                    </div>
+                </div>
+
                 <div style="margin-bottom: 16px;">
-                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">URL / Link Kustom Unduhan APK (Opsional)</label>
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Atau Tautkan URL / Link Kustom Unduhan APK (Opsional)</label>
                     <input type="url" id="app_apk_url" name="app_apk_url" value="{{ old('app_apk_url', $settings['app_apk_url']) }}" placeholder="https://drive.google.com/... atau https://download.hiroshima.web.id/..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
                         Jika dikosongkan, tombol download akan otomatis mengunduh file APK internal server (<code>public/downloads/Hiroshima.apk</code>).
