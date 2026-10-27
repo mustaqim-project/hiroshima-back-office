@@ -61,7 +61,10 @@ class SyncController extends Controller
             || in_array($user->role, ['owner', 'central_admin'])
             || $user->can('branch.manage');
 
-        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+        $firstItemBranchId = $request->input('items.0.branch_id');
+        $requestedBranchId = $request->header('X-Branch-Id') 
+            ?? $request->input('branch_id') 
+            ?? $firstItemBranchId;
 
         if ($requestedBranchId && $canSwitch) {
             $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);

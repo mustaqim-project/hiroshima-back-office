@@ -38,6 +38,7 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'uuid' => 'nullable|uuid',
+            'branch_id' => 'nullable|exists:branches,id',
             'order_type_id' => 'required|exists:order_types,id',
             'table_id' => 'nullable|exists:tables,id',
             'customer_id' => 'nullable|exists:customers,id',
@@ -63,7 +64,10 @@ class OrderController extends Controller
             || in_array($user->role, ['owner', 'central_admin'])
             || $user->can('branch.manage');
 
-        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+        $shift = Shift::find($validated['shift_id']);
+        $requestedBranchId = $request->header('X-Branch-Id') 
+            ?? $request->input('branch_id') 
+            ?? ($canSwitch && $shift ? $shift->branch_id : null);
 
         if ($requestedBranchId && $canSwitch) {
             $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
@@ -72,8 +76,6 @@ class OrderController extends Controller
         } else {
             $branch = Branch::where('is_active', true)->firstOrFail();
         }
-
-        $shift = Shift::find($validated['shift_id']);
 
         if (! $shift || $shift->status !== 'open') {
             return response()->json([
@@ -243,6 +245,7 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'uuid' => 'nullable|uuid',
+            'branch_id' => 'nullable|exists:branches,id',
             'order_type_id' => 'required|exists:order_types,id',
             'table_id' => 'nullable|exists:tables,id',
             'customer_id' => 'nullable|exists:customers,id',
@@ -265,8 +268,22 @@ class OrderController extends Controller
         ]);
 
         $user = $request->user();
-        $branch = Branch::findOrFail($user->branch_id ?? 1);
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
         $shift = Shift::find($validated['shift_id']);
+        $requestedBranchId = $request->header('X-Branch-Id') 
+            ?? $request->input('branch_id') 
+            ?? ($canSwitch && $shift ? $shift->branch_id : null);
+
+        if ($requestedBranchId && $canSwitch) {
+            $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
+        } elseif ($user->branch_id) {
+            $branch = Branch::findOrFail($user->branch_id);
+        } else {
+            $branch = Branch::where('is_active', true)->firstOrFail();
+        }
 
         if (! $shift || $shift->status !== 'open') {
             return response()->json([
@@ -297,7 +314,18 @@ class OrderController extends Controller
     public function heldOrders(Request $request): JsonResponse
     {
         $user = $request->user();
-        $branchId = $user->branch_id ?? 1;
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
+        if ($requestedBranchId && $canSwitch) {
+            $branchId = (int)$requestedBranchId;
+        } elseif ($user->branch_id) {
+            $branchId = (int)$user->branch_id;
+        } else {
+            $branchId = (int)(\App\Models\Branch::where('is_active', true)->value('id') ?? 1);
+        }
         $shiftId = $request->query('shift_id');
 
         $heldBills = $this->holdBillService->listHeld($branchId, $shiftId ? (int) $shiftId : null);

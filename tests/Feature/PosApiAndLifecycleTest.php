@@ -561,4 +561,103 @@ class PosApiAndLifecycleTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('results.0.status', 'duplicate_ok');
     }
+
+    /**
+     * @test
+     * Verifies that when an Admin/Owner switches branch to Cilandak,
+     * the transaction record is strictly recorded under Cilandak (branch_id = 2),
+     * and NOT under their default assigned branch (Cikini, branch_id = 1).
+     */
+    public function test_admin_switches_branch_and_sync_push_records_order_in_target_branch_not_default_branch(): void
+    {
+        // 1. Create Second Branch (Cilandak)
+        $cilandak = Branch::create([
+            'business_id' => $this->business->id,
+            'name' => 'Hiroshima Cilandak',
+            'code' => 'HRS-CLK',
+            'tax_percent' => 10.00,
+            'service_charge_percent' => 5.00,
+            'tax_included' => false,
+            'rounding_mode' => 'round_nearest_100',
+            'is_active' => true,
+        ]);
+
+        // 2. Create Admin user default-assigned to Cikini ($this->branch->id)
+        $adminUser = User::create([
+            'business_id' => $this->business->id,
+            'branch_id' => $this->branch->id, // Default is Cikini
+            'name' => 'Admin Owner',
+            'username' => 'adminowner',
+            'email' => 'adminowner@hiroshima.test',
+            'password' => Hash::make('secret123'),
+            'role' => 'central_admin',
+            'pin_hash' => password_hash('999999', PASSWORD_ARGON2ID),
+            'is_active' => true,
+        ]);
+        $token = $adminUser->createToken('admin-tablet')->plainTextToken;
+
+        // 3. Admin switches to Cilandak and opens shift for Cilandak
+        $openShiftRes = $this->withHeader('Authorization', "Bearer {$token}")
+            ->withHeader('X-Branch-Id', (string) $cilandak->id)
+            ->postJson('/api/v1/shifts/open', [
+                'starting_cash' => 100000,
+                'branch_id' => $cilandak->id,
+            ]);
+
+        $openShiftRes->assertStatus(201);
+        $shiftId = $openShiftRes->json('shift.id');
+        $this->assertEquals($cilandak->id, $openShiftRes->json('shift.branch_id'));
+
+        // 4. Admin pushes transaction made at Cilandak branch
+        $cilandakOrderUuid = (string) Str::uuid();
+        $pushItems = [
+            [
+                'uuid' => $cilandakOrderUuid,
+                'order_no' => 'HRSCLK-POS-998877',
+                'branch_id' => $cilandak->id, // Mobile explicitly puts Cilandak
+                'user_id' => $adminUser->id,
+                'shift_id' => $shiftId,
+                'order_type_id' => $this->dineIn->id,
+                'client_created_at' => now('Asia/Jakarta')->toIso8601String(),
+                'subtotal' => 60000,
+                'total_amount' => 60000,
+                'paid_amount' => 60000,
+                'status' => 'completed',
+                'items' => [
+                    [
+                        'product_id' => $this->ramen->id,
+                        'product_name' => $this->ramen->name,
+                        'quantity' => 1,
+                        'unit_price' => 60000,
+                        'subtotal' => 60000,
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'payment_method_id' => $this->cashPayment->id,
+                        'payment_method_name' => 'Tunai',
+                        'amount' => 60000,
+                    ],
+                ],
+            ],
+        ];
+
+        $pushRes = $this->withHeader('Authorization', "Bearer {$token}")
+            ->withHeader('X-Branch-Id', (string) $cilandak->id)
+            ->postJson('/api/v1/sync/push', [
+                'branch_id' => $cilandak->id,
+                'items' => $pushItems,
+            ]);
+
+        $pushRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('success_count', 1);
+
+        // 5. Verify Database: Must be recorded in Cilandak ($cilandak->id), NOT Cikini ($this->branch->id)
+        $order = Order::where('uuid', $cilandakOrderUuid)->first();
+        $this->assertNotNull($order);
+        $this->assertEquals($cilandak->id, $order->branch_id, 'Order MUST be recorded under Cilandak branch ID');
+        $this->assertNotEquals($this->branch->id, $order->branch_id, 'Order must NOT be recorded under Cikini');
+    }
 }
+

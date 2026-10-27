@@ -27,8 +27,19 @@ class AuthorizeController extends Controller
         ]);
 
         $user = $request->user();
-        $branchId = $user->branch_id ?? 1;
-        $branch = Branch::findOrFail($branchId);
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+
+        if ($requestedBranchId && $canSwitch) {
+            $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
+        } elseif ($user->branch_id) {
+            $branch = Branch::findOrFail($user->branch_id);
+        } else {
+            $branch = Branch::where('is_active', true)->firstOrFail();
+        }
 
         try {
             $this->pinService->verify(

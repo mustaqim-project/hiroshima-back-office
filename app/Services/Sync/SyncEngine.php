@@ -105,8 +105,17 @@ class SyncEngine
                 continue;
             }
 
+            // Resolve target branch for this item (allowing multi-branch user transactions)
+            $orderBranch = $branch;
+            if (!empty($item['branch_id']) && (int)$item['branch_id'] !== (int)$branch->id) {
+                $targetBranch = Branch::where('is_active', true)->find($item['branch_id']);
+                if ($targetBranch) {
+                    $orderBranch = $targetBranch;
+                }
+            }
+
             try {
-                $evaluation = $this->conflictResolver->evaluateOrder($item, $branch);
+                $evaluation = $this->conflictResolver->evaluateOrder($item, $orderBranch);
 
                 if ($evaluation['status'] === 'rejected') {
                     $results[] = [
@@ -119,14 +128,14 @@ class SyncEngine
                 }
 
                 // Ingest transaction in a database transaction
-                $order = DB::transaction(function () use ($item, $branch, $device, $evaluation) {
+                $order = DB::transaction(function () use ($item, $orderBranch, $device, $evaluation) {
                     $clientCreatedAt = Carbon::parse($item['client_created_at']);
                     $businessDate = $clientCreatedAt->copy()->setTimezone('Asia/Jakarta')->toDateString();
 
                     $order = Order::create([
                         'uuid' => $item['uuid'],
                         'order_no' => $item['order_no'],
-                        'branch_id' => $branch->id,
+                        'branch_id' => $orderBranch->id,
                         'device_id' => $device?->id,
                         'shift_id' => $item['shift_id'] ?? null,
                         'user_id' => $item['user_id'] ?? auth()->id(),
@@ -206,7 +215,7 @@ class SyncEngine
                     }
 
                     // Deduct stock if inventory gate was active at the transaction's client_created_at
-                    if (InventoryGate::isActive($branch->id, $clientCreatedAt)) {
+                    if (InventoryGate::isActive($orderBranch->id, $clientCreatedAt)) {
                         // Inventory stock deduction
                         // (Deduction logic handles recipe ingredients)
                     }
