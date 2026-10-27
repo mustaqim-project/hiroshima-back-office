@@ -70,6 +70,12 @@ class SyncEngine
             'promos' => Promo::where('is_active', true)->whereHas('branches', fn ($q) => $q->where('branch_id', $branch->id))->get(),
             'vouchers' => Voucher::where('is_active', true)->where('ends_at', '>=', now('Asia/Jakarta'))->get(),
             'tables' => Table::where('branch_id', $branch->id)->where('is_active', true)->get(),
+            'users' => \App\Models\User::where('branch_id', $branch->id)->where('is_active', true)->select('id', 'name', 'username', 'role')->get(),
+            'settings' => [
+                'app_name' => \App\Models\Setting::getAppName(),
+                'app_tagline' => \App\Models\Setting::getAppTagline(),
+                'app_logo_url' => \App\Models\Setting::getLogoUrl(),
+            ],
         ];
     }
 
