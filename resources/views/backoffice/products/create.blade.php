@@ -189,7 +189,13 @@
 let varIndex = 1;
 
 function toggleVariantSection(checked) {
-    document.getElementById('variantSection').style.display = checked ? 'block' : 'none';
+    const sec = document.getElementById('variantSection');
+    if (!sec) return;
+    sec.style.display = checked ? 'block' : 'none';
+    const inputs = sec.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.disabled = !checked;
+    });
 }
 
 function addVariantRow() {
@@ -204,8 +210,19 @@ function addVariantRow() {
         <td style="text-align: center;"><button type="button" onclick="this.closest('tr').remove()" style="background: transparent; border: none; color: #dc2626; cursor: pointer; display: inline-flex; align-items: center;" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
     `;
     tbody.appendChild(tr);
+    const toggle = document.getElementById('hasVariantsToggle');
+    if (toggle && !toggle.checked) {
+        tr.querySelectorAll('input, select, textarea').forEach(input => input.disabled = true);
+    }
     varIndex++;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('hasVariantsToggle');
+    if (toggle) {
+        toggleVariantSection(toggle.checked);
+    }
+});
 
 function handlePhotoPreview(input) {
     const previewImg = document.getElementById('photoPreviewImg');

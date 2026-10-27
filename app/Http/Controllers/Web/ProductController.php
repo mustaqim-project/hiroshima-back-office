@@ -40,6 +40,22 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Sanitize variants: if has_variants is false or rows are empty, sanitize before validation
+        if (! $request->boolean('has_variants')) {
+            $request->merge(['variants' => null]);
+        } else {
+            $rawVariants = $request->input('variants', []);
+            if (is_array($rawVariants)) {
+                $cleanVariants = array_values(array_filter($rawVariants, function ($item) {
+                    return is_array($item) && ! empty(trim($item['name'] ?? ''));
+                }));
+                $request->merge([
+                    'variants' => ! empty($cleanVariants) ? $cleanVariants : null,
+                    'has_variants' => ! empty($cleanVariants),
+                ]);
+            }
+        }
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:100',
@@ -53,7 +69,7 @@ class ProductController extends Controller
             'is_active' => 'required|boolean',
             'has_variants' => 'nullable|boolean',
             'variants' => 'nullable|array',
-            'variants.*.name' => 'required_with:variants|string|max:100',
+            'variants.*.name' => 'required|string|max:100',
             'variants.*.sku' => 'nullable|string|max:50',
             'variants.*.price' => 'nullable|integer|min:0',
             'variants.*.manual_cost' => 'nullable|integer|min:0',
@@ -179,6 +195,22 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product): RedirectResponse
     {
+        // Sanitize variants: if has_variants is false or rows are empty, sanitize before validation
+        if (! $request->boolean('has_variants')) {
+            $request->merge(['variants' => null]);
+        } else {
+            $rawVariants = $request->input('variants', []);
+            if (is_array($rawVariants)) {
+                $cleanVariants = array_values(array_filter($rawVariants, function ($item) {
+                    return is_array($item) && ! empty(trim($item['name'] ?? ''));
+                }));
+                $request->merge([
+                    'variants' => ! empty($cleanVariants) ? $cleanVariants : null,
+                    'has_variants' => ! empty($cleanVariants),
+                ]);
+            }
+        }
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:100',
@@ -194,7 +226,7 @@ class ProductController extends Controller
             'has_variants' => 'nullable|boolean',
             'variants' => 'nullable|array',
             'variants.*.id' => 'nullable|integer',
-            'variants.*.name' => 'required_with:variants|string|max:100',
+            'variants.*.name' => 'required|string|max:100',
             'variants.*.sku' => 'nullable|string|max:50',
             'variants.*.price' => 'nullable|integer|min:0',
             'variants.*.manual_cost' => 'nullable|integer|min:0',

@@ -229,6 +229,69 @@ class ModifierAndVariantTest extends TestCase
         ]);
     }
 
+    public function test_can_create_product_without_variants_even_if_empty_variant_array_submitted(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        $payload = [
+            'category_id' => $this->category->id,
+            'name' => 'Ocha Hijau ' . Str::random(4),
+            'sku' => 'OCHA-' . Str::random(4),
+            'base_price' => 8000,
+            'manual_cost' => 2000,
+            'is_active' => 1,
+            'has_variants' => 0,
+            'variants' => [
+                ['name' => '', 'sku' => '', 'price' => '', 'manual_cost' => ''],
+            ],
+        ];
+
+        $response = $this->post(route('products.store'), $payload);
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('products.index'));
+
+        $product = Product::where('sku', $payload['sku'])->first();
+        $this->assertNotNull($product);
+        $this->assertFalse((bool) $product->has_variants);
+        $this->assertEquals(0, $product->variants()->count());
+    }
+
+    public function test_can_update_product_without_variants_even_if_empty_variant_array_submitted(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        $product = Product::create([
+            'category_id' => $this->category->id,
+            'name' => 'Ocha Dingin',
+            'sku' => 'OCHA-01',
+            'manual_cost' => 1500,
+            'has_variants' => false,
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'category_id' => $this->category->id,
+            'name' => 'Ocha Dingin Segar',
+            'sku' => 'OCHA-01',
+            'base_price' => 10000,
+            'manual_cost' => 2000,
+            'is_active' => 1,
+            'has_variants' => 0,
+            'variants' => [
+                ['name' => '', 'sku' => '', 'price' => '', 'manual_cost' => ''],
+            ],
+        ];
+
+        $response = $this->put(route('products.update', $product), $payload);
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('products.index'));
+
+        $product->refresh();
+        $this->assertEquals('Ocha Dingin Segar', $product->name);
+        $this->assertFalse((bool) $product->has_variants);
+        $this->assertEquals(0, $product->variants()->count());
+    }
+
     public function test_sync_engine_pull_and_push_with_modifiers(): void
     {
         $syncEngine = app(SyncEngine::class);
