@@ -18,7 +18,6 @@
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
-/public/downloads/*.apk
 /storage/*.key
 /storage/pail
 /vendor
