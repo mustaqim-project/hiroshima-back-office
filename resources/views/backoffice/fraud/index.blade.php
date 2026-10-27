@@ -13,7 +13,8 @@
             <div class="card-title">Daftar Peringatan Anomali Terdeteksi</div>
         </div>
 
-        <table class="data-table">
+        <div class="table-responsive">
+            <table class="data-table">
             <thead>
                 <tr>
                     <th>Aturan</th>
@@ -83,6 +84,9 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
+
+        {{ $alerts->links() }}
     </div>
 
     <!-- Risk Scores Board -->

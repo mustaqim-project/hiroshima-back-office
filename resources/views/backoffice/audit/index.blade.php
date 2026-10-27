@@ -21,45 +21,45 @@
 </div>
 
 <div class="card">
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Aksi</th>
-                <th>Pengguna</th>
-                <th>Cabang</th>
-                <th>Waktu (WIB)</th>
-                <th>Hash Rantai SHA-256</th>
-                <th>IP Web</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($logs as $l)
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
                 <tr>
-                    <td><strong>#{{ $l->id }}</strong></td>
-                    <td><span class="badge badge-info">{{ $l->action }}</span></td>
-                    <td>{{ $l->user->name ?? 'Sistem' }}</td>
-                    <td>{{ $l->branch->name ?? '-' }}</td>
-                    <td>{{ $l->occurred_at->format('d/m/Y H:i:s') }}</td>
-                    <td>
-                        <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            {{ $l->hash }}
-                        </div>
-                    </td>
-                    <td><span style="font-size: 12px; color: var(--text-muted);">{{ $l->ip ?? '-' }}</span></td>
+                    <th>ID</th>
+                    <th>Aksi</th>
+                    <th>Pengguna</th>
+                    <th>Cabang</th>
+                    <th>Waktu (WIB)</th>
+                    <th>Hash Rantai SHA-256</th>
+                    <th>IP Web</th>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                        Belum ada aktivitas mutasi yang tercatat dalam audit log.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-
-    <div style="margin-top: 16px;">
-        {{ $logs->links() }}
+            </thead>
+            <tbody>
+                @forelse($logs as $l)
+                    <tr>
+                        <td><strong>#{{ $l->id }}</strong></td>
+                        <td><span class="badge badge-info">{{ $l->action }}</span></td>
+                        <td>{{ $l->user->name ?? 'Sistem' }}</td>
+                        <td>{{ $l->branch->name ?? '-' }}</td>
+                        <td>{{ $l->occurred_at->format('d/m/Y H:i:s') }}</td>
+                        <td>
+                            <div style="font-family: monospace; font-size: 11px; color: var(--text-muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ $l->hash }}
+                            </div>
+                        </td>
+                        <td><span style="font-size: 12px; color: var(--text-muted);">{{ $l->ip ?? '-' }}</span></td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                            Belum ada aktivitas mutasi yang tercatat dalam audit log.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
+
+    {{ $logs->links() }}
 </div>
 @endsection

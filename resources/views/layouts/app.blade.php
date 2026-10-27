@@ -283,6 +283,109 @@
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
+        /* ==========================================================================
+           PAGINATION SYSTEM (Apple HIG / Hiroshima Clean Design)
+           ========================================================================== */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding-top: 18px;
+            margin-top: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .pagination-info {
+            color: var(--text-muted);
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pagination-info strong {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+        .pagination-nav {
+            display: inline-flex;
+            align-items: center;
+            list-style: none;
+            gap: 6px;
+            margin: 0;
+            padding: 0;
+            flex-wrap: wrap;
+        }
+        .pagination-item {
+            display: inline-flex;
+            align-items: center;
+        }
+        .pagination-link,
+        .pagination-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            background: #ffffff;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            text-decoration: none;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            user-select: none;
+            line-height: 1;
+        }
+        .pagination-link:hover:not(.is-active):not(.is-disabled),
+        .pagination-btn:hover:not(.is-disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .pagination-link.is-active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.28);
+            cursor: default;
+        }
+        .pagination-btn.is-disabled,
+        .pagination-link.is-disabled {
+            background: #f8fafc;
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            opacity: 0.55;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .pagination-dots {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 36px;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .pagination-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         /* Mobile Bottom Thumb Navigation */
         .mobile-bottom-nav {
             display: none;
@@ -389,6 +492,25 @@
                 gap: 6px;
                 text-align: center;
                 padding: 14px 16px 20px !important;
+            }
+            .pagination-container {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 12px;
+                padding-top: 14px;
+                margin-top: 12px;
+            }
+            .pagination-nav {
+                justify-content: center;
+                width: 100%;
+                gap: 4px;
+            }
+            .pagination-btn, .pagination-link {
+                min-width: 34px;
+                height: 34px;
+                padding: 0 8px;
+                font-size: 12px;
             }
         }
     </style>

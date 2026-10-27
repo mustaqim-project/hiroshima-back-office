@@ -7,7 +7,8 @@
 </div>
 
 <div class="card">
-    <table class="data-table">
+    <div class="table-responsive">
+        <table class="data-table">
         <thead>
             <tr>
                 <th>ID Shift</th>
@@ -86,5 +87,8 @@
             @endforelse
         </tbody>
     </table>
+    </div>
+
+    {{ $shifts->links() }}
 </div>
 @endsection

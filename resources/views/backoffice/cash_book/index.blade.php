@@ -88,7 +88,8 @@
 
 <!-- Transaction Table -->
 <div class="card">
-    <table class="data-table">
+    <div class="table-responsive">
+        <table class="data-table">
         <thead>
             <tr>
                 <th style="width: 110px;">Tanggal</th>
@@ -178,10 +179,9 @@
             @endforelse
         </tbody>
     </table>
-
-    <div style="margin-top: 16px;">
-        {{ $transactions->links() }}
     </div>
+
+    {{ $transactions->links() }}
 </div>
 
 <!-- Modal Foto Bukti (Native CSS/JS, Zero Third Party) -->
