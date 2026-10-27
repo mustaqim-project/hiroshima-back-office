@@ -283,11 +283,20 @@ class ModifierAndVariantTest extends TestCase
         $this->assertEquals($group->name, $pulledProduct->modifierGroups->first()->name);
 
         // 2. Verify Push ingests items and order_item_modifiers
+        $shift = \App\Models\Shift::create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->adminUser->id,
+            'status' => 'open',
+            'opening_balance' => 100000,
+            'opened_at' => now(),
+        ]);
+
         $orderUuid = (string) Str::uuid();
         $pushPayload = [
             [
                 'uuid' => $orderUuid,
                 'order_no' => 'HRS-TEST-' . rand(1000, 9999),
+                'shift_id' => $shift->id,
                 'user_id' => $this->adminUser->id,
                 'order_type_id' => $this->orderType->id,
                 'client_created_at' => now()->toIso8601String(),
