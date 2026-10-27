@@ -33,10 +33,28 @@
             color: #ffffff;
             display: flex;
             flex-direction: column;
-            padding: 24px 16px;
+            padding: 24px 16px 40px;
             position: fixed;
             top: 0; bottom: 0; left: 0;
             z-index: 50;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #475569;
         }
         .brand {
             display: flex;
@@ -45,6 +63,7 @@
             padding-bottom: 24px;
             border-bottom: 1px solid #1e293b;
             margin-bottom: 20px;
+            flex-shrink: 0;
         }
         .brand-badge {
             background: linear-gradient(135deg, #ef4444, #b91c1c);
