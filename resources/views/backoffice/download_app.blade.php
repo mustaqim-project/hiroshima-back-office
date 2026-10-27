@@ -53,9 +53,9 @@
             <div style="border-top: 1px solid var(--border); margin-top: 20px; padding-top: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="badge {{ $hasApk ? 'badge-success' : 'badge-warning' }}" style="padding: 6px 12px; font-size: 12px;">
-                        {{ $hasApk ? '✓ Installer Tersedia' : 'Dalam Kompilasi / Link Kustom' }}
+                        {{ $hasApk ? '✓ Release APK Tersedia' : 'Dalam Kompilasi / Link Kustom' }}
                     </span>
-                    <span style="font-size: 12px; color: var(--text-muted);">Format: <strong>.APK (Android Package)</strong></span>
+                    <span style="font-size: 12px; color: var(--text-muted);">Tipe: <strong>Production Release APK</strong></span>
                 </div>
 
                 <div style="display: flex; gap: 10px;">
@@ -66,11 +66,11 @@
                                 <polyline points="7 10 12 15 17 10"></polyline>
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
-                            <span>Download APK Hiroshima</span>
+                            <span>Download Release APK Hiroshima</span>
                         </a>
                     @else
                         <button type="button" class="btn btn-outline" disabled style="opacity: 0.6; cursor: not-allowed;">
-                            Menunggu File APK
+                            Menyiapkan Release APK...
                         </button>
                     @endif
                 </div>

@@ -43,12 +43,10 @@ class AppDownloadController extends Controller
             return $storageDownload;
         }
 
-        // 4. Cek di output flutter build mobile (relatif dari root repo)
+        // 4. Cek di output flutter build mobile (Wajib Release APK)
         $mobileBuildApks = [
             base_path('../mobile/build/app/outputs/flutter-apk/app-release.apk'),
-            base_path('../mobile/build/app/outputs/flutter-apk/app-debug.apk'),
             'C:/laragon/www/Hiroshima/mobile/build/app/outputs/flutter-apk/app-release.apk',
-            'C:/laragon/www/Hiroshima/mobile/build/app/outputs/flutter-apk/app-debug.apk',
         ];
 
         foreach ($mobileBuildApks as $apk) {

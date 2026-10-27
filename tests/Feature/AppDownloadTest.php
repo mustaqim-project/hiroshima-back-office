@@ -52,7 +52,7 @@ class AppDownloadTest extends TestCase
         $response = $this->actingAs($this->admin)->get(route('app.download.page'));
         $response->assertStatus(200);
         $response->assertSee('Aplikasi Mobile Hiroshima POS');
-        $response->assertSee('Download APK Hiroshima');
+        $response->assertSee('Download Release APK Hiroshima');
         $response->assertSee('Scan untuk Unduh Langsung');
         $response->assertSee('Panduan Instalasi di Tablet / Smartphone Android');
     }
@@ -63,7 +63,7 @@ class AppDownloadTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Download App Hiroshima');
         $response->assertSee('Aplikasi Mobile Kasir POS (Hiroshima)');
-        $response->assertSee('Download APK Hiroshima');
+        $response->assertSee('Download Release APK Hiroshima');
     }
 
     public function test_backoffice_layout_has_topbar_and_sidebar_download_links(): void

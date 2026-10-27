@@ -152,7 +152,7 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h3 style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0;">Aplikasi Mobile Kasir POS (Hiroshima)</h3>
-                        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 2px 8px;">Android APK</span>
+                        <span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; font-size: 10px; padding: 2px 8px;">Production Release APK</span>
                     </div>
                     <p style="font-size: 12.5px; color: #94a3b8; margin-top: 3px; line-height: 1.4;">
                         Instal aplikasi kasir offline-first di tablet kasir & smartphone operasional cabang. Mendukung cetak struk bluetooth, hold bill, dan shift kasir.
@@ -166,7 +166,7 @@
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    <span>Download APK Hiroshima</span>
+                    <span>Download Release APK Hiroshima</span>
                 </a>
                 <a href="{{ route('app.download.page') }}" class="btn btn-outline" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 13px; font-weight: 600; padding: 8px 14px;">
                     Scan QR & Panduan &rarr;
