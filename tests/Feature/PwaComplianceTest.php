@@ -97,4 +97,17 @@ class PwaComplianceTest extends TestCase
         $response->assertSee('apple-touch-icon');
         $response->assertSee('pwa-register.js');
     }
+
+    public function test_pwa_install_is_in_sidebar_and_not_in_topbar()
+    {
+        $pwaRegContent = file_get_contents(public_path('pwa-register.js'));
+        $this->assertStringNotContainsString("headerActions.prepend(btn)", $pwaRegContent);
+        $this->assertStringContainsString("sidebar-pwa-item", $pwaRegContent);
+
+        $admin = \App\Models\User::factory()->create(['role' => 'admin']);
+        $response = $this->actingAs($admin)->get(route('dashboard'));
+        $response->assertStatus(200);
+        $response->assertSee('id="sidebar-pwa-item"', false);
+        $response->assertDontSee('id="pwa-header-install-btn"', false);
+    }
 }

@@ -181,6 +181,31 @@
                 </div>
             </div>
 
+            <!-- Card 5: Installer Aplikasi Mobile (APK) -->
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <div class="card-title">5. Installer & Link Unduhan Aplikasi Mobile (Hiroshima)</div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">URL / Link Kustom Unduhan APK (Opsional)</label>
+                    <input type="url" id="app_apk_url" name="app_apk_url" value="{{ old('app_apk_url', $settings['app_apk_url']) }}" placeholder="https://drive.google.com/... atau https://download.hiroshima.web.id/..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                        Jika dikosongkan, tombol download akan otomatis mengunduh file APK internal server (<code>public/downloads/Hiroshima.apk</code>).
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="badge badge-success" style="font-size: 11px;">Aktif</span>
+                        <span style="font-size: 13px; color: #0f172a; font-weight: 600;">Link Resmi: <code>{{ route('app.download') }}</code></span>
+                    </div>
+                    <a href="{{ route('app.download.page') }}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 12px;">
+                        Lihat Halaman Panduan & QR Code &rarr;
+                    </a>
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 15px; font-weight: 700;">
                     <x-icon name="check" size="16" /> <span style="margin-left: 8px;">Simpan Perubahan Identitas</span>

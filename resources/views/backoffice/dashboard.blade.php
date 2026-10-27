@@ -34,6 +34,14 @@
             </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{{ route('app.download.page') }}" class="btn btn-outline" style="font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-color: #38bdf8; color: #0284c7; background: #ffffff;" title="Unduh Installer APK Aplikasi Mobile Hiroshima">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Download App Hiroshima</span>
+            </a>
             <a href="{{ route('cash-books.create') }}" class="btn btn-primary" style="background: #059669; font-size: 13px; font-weight: 600;">
                 + Catat Kas Masuk / Keluar
             </a>
@@ -132,6 +140,39 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- Quick Banner: Download Aplikasi Mobile Kasir Hiroshima -->
+    <div class="card" style="margin-bottom: 20px; border-radius: 14px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 1px solid #334155; color: #ffffff; padding: 18px 22px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 16px; min-width: 260px; flex: 1;">
+                <div style="width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #b91c1c); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: #fff; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); flex-shrink: 0;">
+                    H
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0;">Aplikasi Mobile Kasir POS (Hiroshima)</h3>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 10px; padding: 2px 8px;">Android APK</span>
+                    </div>
+                    <p style="font-size: 12.5px; color: #94a3b8; margin-top: 3px; line-height: 1.4;">
+                        Instal aplikasi kasir offline-first di tablet kasir & smartphone operasional cabang. Mendukung cetak struk bluetooth, hold bill, dan shift kasir.
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <a href="{{ route('app.download') }}" class="btn btn-primary" style="background: #dc2626; font-size: 13px; font-weight: 700; padding: 8px 18px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35); display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Download APK Hiroshima</span>
+                </a>
+                <a href="{{ route('app.download.page') }}" class="btn btn-outline" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #ffffff; font-size: 13px; font-weight: 600; padding: 8px 14px;">
+                    Scan QR & Panduan &rarr;
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Row 1: Primary Executive KPI Stats Cards -->

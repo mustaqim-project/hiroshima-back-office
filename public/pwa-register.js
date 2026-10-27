@@ -66,47 +66,29 @@
         if (banner) banner.remove();
         const headerBtn = document.getElementById('pwa-header-install-btn');
         if (headerBtn) headerBtn.remove();
+        const sidebarItem = document.getElementById('sidebar-pwa-item');
+        if (sidebarItem) sidebarItem.style.display = 'none';
+        const pageBtn = document.getElementById('pwaInstallBtn');
+        if (pageBtn) pageBtn.style.display = 'none';
     });
 
     function renderInstallUI() {
         if (isStandalone) return;
-        if (document.getElementById('pwa-header-install-btn')) return;
 
-        // Try to add button into header actions if available
-        const headerActions = document.querySelector('.header-actions') || document.querySelector('.top-bar-right');
-        if (headerActions) {
-            const btn = document.createElement('button');
-            btn.id = 'pwa-header-install-btn';
-            btn.type = 'button';
-            btn.className = 'btn-pwa-install';
-            btn.innerHTML = `
-                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" style="margin-right: 6px;">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                <span>Pasang Aplikasi</span>
-            `;
-            btn.style.cssText = `
-                display: inline-flex;
-                align-items: center;
-                background: linear-gradient(135deg, #dc2626, #b91c1c);
-                color: #ffffff;
-                font-size: 12px;
-                font-weight: 700;
-                padding: 6px 12px;
-                border-radius: 8px;
-                border: none;
-                cursor: pointer;
-                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
-                transition: transform 0.15s ease, opacity 0.15s ease;
-                margin-right: 8px;
-            `;
-            btn.onmouseover = function () { btn.style.transform = 'translateY(-1px)'; };
-            btn.onmouseout = function () { btn.style.transform = 'none'; };
-            btn.onclick = function () {
-                triggerInstall();
-            };
+        // Ensure NO button is ever injected into topbar/header actions
+        const oldHeaderBtn = document.getElementById('pwa-header-install-btn');
+        if (oldHeaderBtn) oldHeaderBtn.remove();
 
-            headerActions.prepend(btn);
+        // 1. Show in sidebar if sidebar element exists (Back Office layout)
+        const sidebarItem = document.getElementById('sidebar-pwa-item');
+        if (sidebarItem) {
+            sidebarItem.style.display = 'block';
+        }
+
+        // 2. Show dedicated landing page / in-page button if exists
+        const pageBtn = document.getElementById('pwaInstallBtn') || document.querySelector('[data-pwa-install]');
+        if (pageBtn) {
+            pageBtn.style.display = 'inline-flex';
         }
     }
 

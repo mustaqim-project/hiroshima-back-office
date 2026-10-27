@@ -30,6 +30,7 @@ class GeneralSettingController extends Controller
             'support_email' => Setting::get('support_email', 'hiroshimajapanese@gmail.com'),
             'support_phone' => Setting::get('support_phone', ''),
             'hold_bill_enabled' => Setting::isHoldBillEnabled(),
+            'app_apk_url' => Setting::get('app_apk_url', ''),
         ];
 
         return view('backoffice.settings.general', compact('settings'));
@@ -44,6 +45,7 @@ class GeneralSettingController extends Controller
             'footer_text' => 'nullable|string|max:255',
             'support_email' => 'nullable|email|max:100',
             'support_phone' => 'nullable|string|max:50',
+            'app_apk_url' => 'nullable|url|max:255',
             'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'app_favicon' => 'nullable|file|mimes:ico,png,svg|max:1024',
             'remove_logo' => 'nullable|boolean',
@@ -65,6 +67,7 @@ class GeneralSettingController extends Controller
         Setting::set('footer_text', $validated['footer_text'] ?? '', 'general');
         Setting::set('support_email', $validated['support_email'] ?? '', 'general');
         Setting::set('support_phone', $validated['support_phone'] ?? '', 'general');
+        Setting::set('app_apk_url', $validated['app_apk_url'] ?? '', 'general');
         Setting::set('hold_bill_enabled', $request->has('hold_bill_enabled') ? '1' : '0', 'general');
 
         // Handle Logo Removal

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\AppDownloadController;
 use App\Http\Controllers\Web\AuditController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\BranchController;
@@ -53,6 +54,10 @@ Route::post('/verify-pin', [ForgotPinController::class, 'verifyAndResetPin'])->n
 
 // Public Landing Page (Hiroshima Japanese Street Food)
 Route::get('/welcome', fn() => view('welcome'))->name('welcome');
+
+// Download Aplikasi Mobile Hiroshima POS (Public & Tablet Scan Direct Route)
+Route::get('/download-app', [AppDownloadController::class, 'download'])->name('app.download');
+Route::get('/download-app/info', [AppDownloadController::class, 'page'])->name('app.download.page.public');
 
 // Authenticated Back-office Operations
 Route::middleware('auth')->group(function () {
@@ -109,5 +114,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings/smtp', [SmtpSettingController::class, 'index'])->name('settings.smtp');
         Route::post('/settings/smtp', [SmtpSettingController::class, 'update'])->name('settings.smtp.update');
         Route::post('/settings/smtp/test', [SmtpSettingController::class, 'testMail'])->name('settings.smtp.test');
+
+        // Unduh & Panduan Aplikasi Mobile Hiroshima POS
+        Route::get('/download-app', [AppDownloadController::class, 'page'])->name('app.download.page');
     });
 });
