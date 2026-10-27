@@ -2,6 +2,10 @@
 
 Sistem Back Office dan REST API POS untuk Hiroshima Japanese Street Food.
 
+## Domain & Endpoint
+- **Domain Web / Back Office**: `https://hiroshima.web.id`
+- **REST API POS v1**: `https://hiroshima.web.id/api/v1`
+
 ## Fitur Utama
 - Laravel 11 + Blade / Tailwind CSS
 - REST API POS v1 (Auth, Sync, Order, Shifts, Authorization PIN)

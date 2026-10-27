@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+    # Disable DirectorySlash so Apache doesn't auto-redirect routes matching directory names
+    <IfModule mod_dir.c>
+        DirectorySlash Off
+    </IfModule>
+
+    RewriteEngine On
+
+    # Prevent direct access to sensitive files
+    RewriteRule ^(\.env|\.git|composer\.(json|lock)|package\.(json|lock)|phpunit\.xml) - [F,L,NC]
+
+    # Handle Authorization Header for API & Sanctum on LiteSpeed/Hostinger
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Canonical redirect: If /public/ is in the raw browser request, redirect to clean URL
+    RewriteCond %{THE_REQUEST} \s/+public(?:/([^\s?]*))? [NC]
+    RewriteRule ^ /%1 [L,R=301,NE]
+
+    # If requested resource is a physical file inside public/, serve it
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Send all other requests directly to public/index.php (prevents mod_dir directory redirects)
+    RewriteCond %{REQUEST_URI} !^/public/index\.php
+    RewriteRule ^(.*)$ public/index.php [L]
+</IfModule>
+
+
