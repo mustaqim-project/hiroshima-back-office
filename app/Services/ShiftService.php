@@ -33,14 +33,35 @@ class ShiftService
      */
     public function open(int $branchId, int $userId, ?int $deviceId, int $startingCash): Shift
     {
-        // Enforce 1 active shift per user and per device
-        $existingUserShift = Shift::where('user_id', $userId)->where('status', 'open')->first();
+        // 1. Auto-close any expired shifts across the system (>23h)
+        $this->autoCloseExpiredShifts();
+
+        // 2. Check if cashier already has an active shift
+        $existingUserShift = Shift::with('branch')->where('user_id', $userId)->where('status', 'open')->first();
         if ($existingUserShift) {
-            throw new Exception("Kasir masih memiliki shift aktif yang belum ditutup (Shift #{$existingUserShift->id}). Harap tutup shift sebelumnya.");
+            // Check if this shift has exceeded 23 hours
+            try {
+                $this->assertOpenAndFresh($existingUserShift);
+            } catch (Exception $e) {
+                // If it was auto-closed due to expiration, re-fetch
+                $existingUserShift = Shift::with('branch')->where('user_id', $userId)->where('status', 'open')->first();
+            }
+        }
+
+        if ($existingUserShift) {
+            $branchName = $existingUserShift->branch?->name ? " (Cabang {$existingUserShift->branch->name})" : "";
+            throw new Exception("Kasir masih memiliki shift aktif yang belum ditutup (Shift #{$existingUserShift->id}{$branchName}). Harap tutup shift sebelumnya.");
         }
 
         if ($deviceId) {
             $existingDeviceShift = Shift::where('device_id', $deviceId)->where('status', 'open')->first();
+            if ($existingDeviceShift) {
+                try {
+                    $this->assertOpenAndFresh($existingDeviceShift);
+                } catch (Exception $e) {
+                    $existingDeviceShift = Shift::where('device_id', $deviceId)->where('status', 'open')->first();
+                }
+            }
             if ($existingDeviceShift) {
                 throw new Exception("Perangkat tablet ini masih memiliki shift terbuka (Shift #{$existingDeviceShift->id}). Harap tutup shift tersebut terlebih dahulu.");
             }

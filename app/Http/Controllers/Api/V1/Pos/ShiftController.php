@@ -28,14 +28,33 @@ class ShiftController extends Controller
         $user = $request->user();
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id') ?? $request->input('branch_id');
 
-        $query = Shift::where('user_id', $user->id)
-            ->where('status', 'open');
+        // Auto-close any expired shifts system-wide first so we never return stale open shifts
+        $this->shiftService->autoCloseExpiredShifts();
+
+        // Check if there is an active shift for this user on the requested branch
+        $shift = null;
+        $isOtherBranch = false;
 
         if ($requestedBranchId) {
-            $query->where('branch_id', $requestedBranchId);
+            $shift = Shift::with('branch')
+                ->where('user_id', $user->id)
+                ->where('branch_id', $requestedBranchId)
+                ->where('status', 'open')
+                ->latest('id')
+                ->first();
         }
 
-        $shift = $query->latest('id')->first();
+        // If not found on requested branch, look for any active shift for this user across all branches
+        if (! $shift) {
+            $shift = Shift::with('branch')
+                ->where('user_id', $user->id)
+                ->where('status', 'open')
+                ->latest('id')
+                ->first();
+            if ($shift && $requestedBranchId && (int)$shift->branch_id !== (int)$requestedBranchId) {
+                $isOtherBranch = true;
+            }
+        }
 
         if (! $shift) {
             return response()->json([
@@ -50,10 +69,11 @@ class ShiftController extends Controller
             $this->shiftService->assertOpenAndFresh($shift);
         } catch (Exception $e) {
             return response()->json([
-                'success' => false,
+                'success' => true,
                 'has_active_shift' => false,
-                'message' => $e->getMessage(),
-            ], 410);
+                'shift' => null,
+                'notice' => $e->getMessage(),
+            ]);
         }
 
         $expectedCash = $this->shiftService->calculateExpectedCash($shift);
@@ -64,6 +84,8 @@ class ShiftController extends Controller
             'shift' => [
                 'id' => $shift->id,
                 'branch_id' => $shift->branch_id,
+                'branch_name' => $shift->branch?->name ?? 'Cabang #' . $shift->branch_id,
+                'is_other_branch' => $isOtherBranch,
                 'opened_at' => $shift->opened_at->toIso8601String(),
                 'starting_cash' => $shift->starting_cash,
                 'expected_cash' => $expectedCash,
@@ -122,19 +144,37 @@ class ShiftController extends Controller
         $validated = $request->validate([
             'actual_cash' => 'required|integer|min:0',
             'force_cancel_unfinalized' => 'nullable|boolean',
+            'shift_id' => 'nullable|integer',
         ]);
 
         $user = $request->user();
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id') ?? $request->input('branch_id');
 
-        $query = Shift::where('user_id', $user->id)
-            ->where('status', 'open');
-
-        if ($requestedBranchId) {
-            $query->where('branch_id', $requestedBranchId);
+        // 1. If explicit shift_id provided, find it
+        $shift = null;
+        if (! empty($validated['shift_id'])) {
+            $shift = Shift::where('id', $validated['shift_id'])
+                ->where('user_id', $user->id)
+                ->where('status', 'open')
+                ->first();
         }
 
-        $shift = $query->latest('id')->first();
+        // 2. Otherwise prioritize open shift at requested branch
+        if (! $shift && $requestedBranchId) {
+            $shift = Shift::where('user_id', $user->id)
+                ->where('branch_id', $requestedBranchId)
+                ->where('status', 'open')
+                ->latest('id')
+                ->first();
+        }
+
+        // 3. Fallback to any open shift of this user across branches
+        if (! $shift) {
+            $shift = Shift::where('user_id', $user->id)
+                ->where('status', 'open')
+                ->latest('id')
+                ->first();
+        }
 
         if (! $shift) {
             return response()->json([
@@ -202,11 +242,17 @@ class ShiftController extends Controller
         $user = $request->user();
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id') ?? $request->input('branch_id');
 
-        $query = Shift::where('user_id', $user->id);
+        $shift = null;
         if ($requestedBranchId) {
-            $query->where('branch_id', $requestedBranchId);
+            $shift = Shift::where('user_id', $user->id)
+                ->where('branch_id', $requestedBranchId)
+                ->latest('id')
+                ->first();
         }
-        $shift = $query->latest('id')->first();
+
+        if (! $shift) {
+            $shift = Shift::where('user_id', $user->id)->latest('id')->first();
+        }
 
         if (! $shift) {
             return response()->json([
