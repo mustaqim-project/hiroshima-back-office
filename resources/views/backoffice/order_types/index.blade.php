@@ -6,7 +6,8 @@
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Master Data Jenis Pesanan (Order Types)</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Kelola jenis layanan transaksi (Dine In, Take Away, Delivery / Ojol) sebagai acuan sistem multi-harga produk tanpa meja fisik.</p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="order-types" title="Jenis Pesanan" />
         <a href="{{ route('order-types.create') }}" class="btn btn-primary">+ Tambah Jenis Pesanan</a>
     </div>
 </div>

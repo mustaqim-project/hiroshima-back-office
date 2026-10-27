@@ -1,12 +1,13 @@
 @extends('layouts.app', ['title' => 'Manajemen Cabang & Keamanan PIN'])
 
 @section('content')
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Manajemen Cabang & Kebijakan PIN</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Atur parameter finansial, otorisasi PIN cabang (Argon2id), dan status saklar inventori per cabang.</p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="branches" title="Data Cabang" />
         <a href="{{ route('branches.create') }}" class="btn btn-primary">+ Tambah Cabang</a>
     </div>
 </div>

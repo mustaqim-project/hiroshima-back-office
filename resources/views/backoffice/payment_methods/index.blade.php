@@ -1,12 +1,13 @@
 @extends('layouts.app', ['title' => 'Metode Pembayaran (Tender)'])
 
 @section('content')
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Metode Pembayaran (Tender POS)</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Kelola opsi tender pembayaran kasir seperti Uang Tunai, EDC Kartu Debit/Kredit, dan QRIS Statis.</p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="payment-methods" title="Metode Bayar" />
         <a href="{{ route('payment-methods.create') }}" class="btn btn-primary">+ Tambah Metode Bayar</a>
     </div>
 </div>

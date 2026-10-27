@@ -1,12 +1,13 @@
 @extends('layouts.app', ['title' => 'Manajemen Pengguna & Staf'])
 
 @section('content')
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Manajemen Pengguna & Hak Akses</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Kelola akun staf, penugasan cabang (Multi-outlet RBAC), otorisasi PIN kasir, dan keamanan login.</p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="users" title="Pengguna" />
         <a href="{{ route('users.create') }}" class="btn btn-primary">+ Tambah Pengguna</a>
     </div>
 </div>

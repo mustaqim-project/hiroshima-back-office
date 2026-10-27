@@ -8,7 +8,8 @@
             Konfigurasi opsi pilihan menu kasir seperti Level Pedas, Ekstra Topping, Pilihan Saus, dan Preferensi Minuman.
         </p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="modifier-groups" title="Grup Modifier" />
         <a href="{{ route('modifier-groups.create') }}" class="btn btn-primary">+ Tambah Grup Modifier</a>
     </div>
 </div>

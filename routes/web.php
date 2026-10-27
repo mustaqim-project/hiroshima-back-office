@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\BranchController;
 use App\Http\Controllers\Web\CashBookController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\ExcelDataController;
 use App\Http\Controllers\Web\ForgotPasswordController;
 use App\Http\Controllers\Web\ForgotPinController;
 use App\Http\Controllers\Web\FraudController;
@@ -49,6 +50,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('backoffice')->group(function () {
+        // Sistem Ekspor, Unduh Template, dan Impor Spreadsheet (Excel / CSV)
+        foreach (['branches', 'products', 'modifier-groups', 'categories', 'order-types', 'payment-methods', 'users', 'promos'] as $excelMod) {
+            Route::get("{$excelMod}/export", [ExcelDataController::class, 'export'])->defaults('module', $excelMod)->name("{$excelMod}.export");
+            Route::get("{$excelMod}/template", [ExcelDataController::class, 'template'])->defaults('module', $excelMod)->name("{$excelMod}.template");
+            Route::post("{$excelMod}/import", [ExcelDataController::class, 'import'])->defaults('module', $excelMod)->name("{$excelMod}.import");
+        }
+
         // Master Data & Operasional (Full CRUD + Soft Delete)
         Route::resource('cash-books', CashBookController::class);
         Route::resource('branches', BranchController::class);

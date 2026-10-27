@@ -271,6 +271,28 @@
                 </div>
             @endif
 
+            @if(session('import_warnings'))
+                <div class="alert-bar" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">
+                    <strong>Peringatan Format Impor:</strong>
+                    <ul style="margin-left: 20px; margin-top: 6px;">
+                        @foreach(session('import_warnings') as $warn)
+                            <li>{{ $warn }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @if(session('import_errors'))
+                <div class="alert-bar alert-danger" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">
+                    <strong>Kendala Format Impor:</strong>
+                    <ul style="margin-left: 20px; margin-top: 6px;">
+                        @foreach(session('import_errors') as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @yield('content')
         </main>
 

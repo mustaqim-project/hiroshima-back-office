@@ -1,12 +1,13 @@
 @extends('layouts.app', ['title' => 'Promosi & Diskon Cabang'])
 
 @section('content')
-<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
         <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Manajemen Promosi & Diskon</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Atur skema promosi persentase/potongan harga langsung, minimum transaksi, dan cakupan cabang.</p>
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <x-excel-toolbar module="promos" title="Promosi & Diskon" />
         <a href="{{ route('promos.create') }}" class="btn btn-primary">+ Tambah Promosi</a>
     </div>
 </div>
