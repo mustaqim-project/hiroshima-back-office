@@ -983,7 +983,7 @@ class ReportExcelService
             $sumIn += $in;
             $sumOut += $out;
 
-            $branchStr = $e->is_global ? 'Kantor Pusat (Global)' : ($e->branch->name ?? '-');
+            $branchStr = $e->is_global ? 'Kantor Pusat (Global Pusat)' : ($e->branch->name ?? '-');
 
             $rows[] = [
                 $idx + 1,

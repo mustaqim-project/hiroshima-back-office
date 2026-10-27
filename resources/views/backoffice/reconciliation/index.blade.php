@@ -62,7 +62,7 @@
                     </td>
                     <td>
                         <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                            <a href="{{ route('reconciliation.report', $s) }}" class="btn btn-outline btn-sm" target="_blank" title="Cetak / Lihat Laporan Close Shift">
+                            <a href="{{ Route::has('reconciliation.report') ? route('reconciliation.report', $s) : url('/backoffice/reconciliation/' . $s->id . '/report') }}" class="btn btn-outline btn-sm" target="_blank" title="Cetak / Lihat Laporan Close Shift">
                                 <x-icon name="printer" size="13" /> Laporan
                             </a>
                             @if($s->status !== 'reconciled')

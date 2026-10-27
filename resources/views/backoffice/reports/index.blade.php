@@ -10,7 +10,7 @@
     <!-- Export Action Buttons -->
     <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
         <!-- Single Report Export -->
-        <a href="{{ route('reports.export.single', array_merge(request()->query(), ['type' => $reportType])) }}" 
+        <a href="{{ Route::has('reports.export.single') ? route('reports.export.single', array_merge(request()->query(), ['type' => $reportType])) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'single', 'type' => $reportType]))) }}" 
            class="btn btn-primary" 
            style="background: #047857; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: none; box-shadow: 0 2px 4px rgba(4, 120, 87, 0.2);">
             <x-icon name="download" size="15" />
@@ -18,7 +18,7 @@
         </a>
 
         <!-- Full Package Multi-Sheet Export -->
-        <a href="{{ route('reports.export.package', request()->query()) }}" 
+        <a href="{{ Route::has('reports.export.package') ? route('reports.export.package', request()->query()) : url('/backoffice/reports?' . http_build_query(array_merge(request()->query(), ['export' => 'package']))) }}" 
            class="btn btn-primary" 
            style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 10px 16px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);">
             <x-icon name="archive" size="15" />

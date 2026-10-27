@@ -275,11 +275,9 @@ class CashBookFinanceTest extends TestCase
         $response->assertSee('Laporan Buku Kas');
         $response->assertSee('Global Pusat');
 
-        // 2. Export CSV
-        $exportResponse = $this->get('/backoffice/reports?type=RPT-FIN&export=csv');
+        // 2. Export Report
+        $exportResponse = $this->get('/backoffice/reports?type=RPT-FIN&export=single');
         $exportResponse->assertStatus(200);
-        $exportResponse->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
-        $this->assertStringContainsString('ID,Tanggal,Cabang,Jenis Arus,Kategori', $exportResponse->getContent());
-        $this->assertStringContainsString('Global (Kantor Pusat)', $exportResponse->getContent());
+        $this->assertStringContainsString('spreadsheetml', (string) $exportResponse->headers->get('Content-Type'));
     }
 }

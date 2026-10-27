@@ -250,6 +250,70 @@ class PosApiAndLifecycleTest extends TestCase
         $afterLogout->assertStatus(401);
     }
 
+    public function test_cashier_login_assigned_to_branch_cannot_switch_branch(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'username_or_email' => 'kasir_ckn',
+            'password_or_pin' => '123456',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('user.branch_id', $this->branch->id)
+            ->assertJsonPath('user.branch.name', 'Hiroshima Cikini')
+            ->assertJsonPath('user.can_switch_branch', false);
+
+        $this->assertCount(1, $response->json('user.accessible_branches'));
+    }
+
+    public function test_owner_login_can_switch_branches(): void
+    {
+        $branch2 = \App\Models\Branch::create([
+            'business_id' => $this->branch->business_id,
+            'name' => 'Hiroshima Tebet',
+            'code' => 'HRS-TBT',
+            'tax_percent' => 10.00,
+            'service_charge_percent' => 0.00,
+            'tax_included' => false,
+            'rounding_mode' => 'round_nearest_100',
+            'pin_void_hash' => $this->branch->pin_void_hash,
+            'pin_discount_hash' => $this->branch->pin_discount_hash,
+            'is_active' => true,
+        ]);
+
+        $owner = User::create([
+            'name' => 'Owner Hiroshima',
+            'username' => 'owner',
+            'email' => 'owner@hiroshima.id',
+            'password' => Hash::make('password123'),
+            'role' => 'owner',
+            'branch_id' => null, // Multi branch access
+            'is_active' => true,
+        ]);
+        $owner->assignRole('owner');
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'username_or_email' => 'owner',
+            'password_or_pin' => 'password123',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('user.can_switch_branch', true);
+
+        $this->assertGreaterThanOrEqual(2, count($response->json('user.accessible_branches')));
+
+        $token = $response->json('token');
+
+        // Check GET /branches endpoint
+        $branchesRes = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/branches');
+
+        $branchesRes->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('can_switch_branch', true);
+    }
+
     public function test_api_supervisory_pin_authorization(): void
     {
         $token = $this->cashierUser->createToken('test-token')->plainTextToken;
