@@ -280,25 +280,55 @@ class DashboardController extends Controller
             ];
         }
 
-        // 8. Payment Methods Distribution
+        // 8. Payment Methods Distribution (Display all active payment methods configured)
         $completedOrderIds = $allPeriodOrders->pluck('id')->toArray();
-        $paymentStats = [];
-        if (!empty($completedOrderIds)) {
-            $paymentRecords = Payment::whereIn('order_id', $completedOrderIds)
-                ->selectRaw('payment_method_name_snapshot, SUM(amount) as total_amount, COUNT(*) as count')
-                ->groupBy('payment_method_name_snapshot')
-                ->orderByDesc('total_amount')
-                ->get();
+        $activePaymentMethods = PaymentMethod::where('is_active', true)->orderBy('id')->get();
+        $allPaymentsInPeriod = !empty($completedOrderIds)
+            ? Payment::whereIn('order_id', $completedOrderIds)->get()
+            : collect();
 
-            $totalPaymentSum = (int) $paymentRecords->sum('total_amount');
-            foreach ($paymentRecords as $pr) {
-                $paymentStats[] = [
-                    'name' => $pr->payment_method_name_snapshot ?: 'Lainnya',
-                    'amount' => (int) $pr->total_amount,
-                    'count' => (int) $pr->count,
-                    'pct' => $totalPaymentSum > 0 ? round(($pr->total_amount / $totalPaymentSum) * 100, 1) : 0,
-                ];
-            }
+        $totalPaymentSum = (int) $allPaymentsInPeriod->sum('amount');
+        $paymentStats = [];
+
+        foreach ($activePaymentMethods as $pm) {
+            $matched = $allPaymentsInPeriod->filter(function ($p) use ($pm) {
+                return $p->payment_method_id == $pm->id 
+                    || strcasecmp(trim($p->payment_method_name_snapshot ?? ''), trim($pm->name)) === 0;
+            });
+
+            $pmAmount = (int) $matched->sum('amount');
+            $pmCount = $matched->count();
+
+            $paymentStats[] = [
+                'id' => $pm->id,
+                'name' => $pm->name,
+                'code' => $pm->code,
+                'type' => $pm->type,
+                'amount' => $pmAmount,
+                'count' => $pmCount,
+                'pct' => $totalPaymentSum > 0 ? round(($pmAmount / $totalPaymentSum) * 100, 1) : 0,
+            ];
+        }
+
+        // Include any payments using inactive or legacy methods
+        $matchedIds = $paymentStats ? array_column($paymentStats, 'id') : [];
+        $unmatched = $allPaymentsInPeriod->filter(function ($p) use ($matchedIds, $activePaymentMethods) {
+            $matchedById = in_array($p->payment_method_id, $matchedIds);
+            $matchedByName = $activePaymentMethods->contains(fn($pm) => strcasecmp(trim($pm->name), trim($p->payment_method_name_snapshot ?? '')) === 0);
+            return !$matchedById && !$matchedByName;
+        });
+
+        if ($unmatched->isNotEmpty()) {
+            $otherAmount = (int) $unmatched->sum('amount');
+            $paymentStats[] = [
+                'id' => null,
+                'name' => 'Metode Lainnya',
+                'code' => 'other',
+                'type' => 'other',
+                'amount' => $otherAmount,
+                'count' => $unmatched->count(),
+                'pct' => $totalPaymentSum > 0 ? round(($otherAmount / $totalPaymentSum) * 100, 1) : 0,
+            ];
         }
 
         // 9. Top 5 Menu Terlaris (Best Seller Products)

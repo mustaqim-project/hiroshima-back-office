@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemModifier;
 use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\Refund;
 use App\Models\Shift;
 use App\Services\AuditLogger;
@@ -197,11 +198,17 @@ class OrderController extends Controller
             if (! empty($validated['payments'])) {
                 $paidTotal = 0;
                 foreach ($validated['payments'] as $p) {
+                    $pmObj = !empty($p['payment_method_id']) ? PaymentMethod::find($p['payment_method_id']) : null;
+                    $pmName = $p['payment_method_name'] 
+                        ?? $p['payment_method_name_snapshot'] 
+                        ?? $pmObj?->name 
+                        ?? 'Tunai (Cash)';
+
                     Payment::create([
                         'order_id' => $order->id,
                         'shift_id' => $shift->id,
                         'payment_method_id' => $p['payment_method_id'],
-                        'payment_method_name_snapshot' => $p['payment_method_name'] ?? 'Tunai',
+                        'payment_method_name_snapshot' => $pmName,
                         'amount' => $p['amount'],
                         'reference_no' => $p['reference_no'] ?? null,
                         'paid_at' => now('Asia/Jakarta'),

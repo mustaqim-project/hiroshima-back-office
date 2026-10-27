@@ -408,10 +408,37 @@
         <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;">
             <div style="margin-bottom: 14px;">
                 <h3 style="font-size: 14px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;"><x-icon name="payment" size="16" style="color: #0f172a;" /> Metode Pembayaran Kasir</h3>
-                <p style="font-size: 12px; color: #64748b;">Pilihan pembayaran pelanggan (Tunai / QRIS / Transfer).</p>
+                <p style="font-size: 12px; color: #64748b;">Distribusi penerimaan per saluran tender POS.</p>
             </div>
-            <div style="position: relative; height: 220px; width: 100%;">
+            <div style="position: relative; height: 180px; width: 100%; margin-bottom: 14px;">
                 <canvas id="paymentChart"></canvas>
+            </div>
+
+            <!-- List Rincian Setiap Metode Pembayaran -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                @php
+                    $methodColors = ['#10b981', '#6366f1', '#0284c7', '#f59e0b', '#ec4899', '#8b5cf6'];
+                @endphp
+                @foreach($paymentStats as $idx => $pm)
+                    @php
+                        $color = $methodColors[$idx % count($methodColors)];
+                    @endphp
+                    <div style="padding: 7px 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {{ $color }};"></span>
+                                <strong style="font-size: 12px; color: #0f172a;">{{ $pm['name'] }}</strong>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong style="font-size: 12px; color: #0f172a;">Rp {{ number_format($pm['amount'], 0, ',', '.') }}</strong>
+                                <span style="font-size: 11px; color: #64748b; margin-left: 4px;">({{ $pm['count'] }}x • {{ $pm['pct'] }}%)</span>
+                            </div>
+                        </div>
+                        <div style="background: #e2e8f0; height: 4px; border-radius: 2px; overflow: hidden; width: 100%;">
+                            <div style="background: {{ $color }}; height: 100%; width: {{ max(1, $pm['pct']) }}%; border-radius: 2px;"></div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -803,13 +830,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // 5. Chart: Payment Methods (Polar / Doughnut)
     const paymentCtx = document.getElementById('paymentChart');
     if (paymentCtx) {
+        const paymentRawData = {!! json_encode($chartPaymentAmounts) !!};
+        const hasPaymentData = paymentRawData.some(v => v > 0);
         new Chart(paymentCtx, {
             type: 'doughnut',
             data: {
                 labels: {!! json_encode($chartPaymentLabels) !!},
                 datasets: [{
-                    data: {!! json_encode($chartPaymentAmounts) !!},
-                    backgroundColor: ['#10b981', '#6366f1', '#06b6d4', '#eab308'],
+                    data: hasPaymentData ? paymentRawData : {!! json_encode(array_fill(0, max(1, count($chartPaymentLabels)), 1)) !!},
+                    backgroundColor: ['#10b981', '#6366f1', '#0284c7', '#f59e0b', '#ec4899', '#8b5cf6'],
                     borderWidth: 2,
                     borderColor: '#ffffff',
                 }]
@@ -822,7 +851,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     tooltip: {
                         callbacks: {
                             label: function(ctx) {
-                                return ctx.label + ': Rp ' + new Intl.NumberFormat('id-ID').format(ctx.raw);
+                                const realAmount = hasPaymentData ? ctx.raw : 0;
+                                return ctx.label + ': Rp ' + new Intl.NumberFormat('id-ID').format(realAmount);
                             }
                         }
                     }

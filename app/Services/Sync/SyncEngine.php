@@ -186,11 +186,18 @@ class SyncEngine
                     // Payments
                     if (! empty($item['payments'])) {
                         foreach ($item['payments'] as $paymentData) {
+                            $pmId = $paymentData['payment_method_id'] ?? null;
+                            $pmObj = $pmId ? PaymentMethod::find($pmId) : null;
+                            $pmName = $paymentData['payment_method_name_snapshot'] 
+                                ?? $paymentData['payment_method_name'] 
+                                ?? $pmObj?->name 
+                                ?? 'Tunai (Cash)';
+
                             Payment::create([
                                 'order_id' => $order->id,
                                 'shift_id' => $item['shift_id'] ?? null,
-                                'payment_method_id' => $paymentData['payment_method_id'],
-                                'payment_method_name_snapshot' => $paymentData['payment_method_name_snapshot'] ?? 'Cash',
+                                'payment_method_id' => $pmId ?? 1,
+                                'payment_method_name_snapshot' => $pmName,
                                 'amount' => $paymentData['amount'],
                                 'reference_no' => $paymentData['reference_no'] ?? null,
                                 'paid_at' => $clientCreatedAt,

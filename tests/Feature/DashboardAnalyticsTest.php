@@ -214,4 +214,58 @@ class DashboardAnalyticsTest extends TestCase
         $response->assertSee($this->branch1->name);
         $response->assertSee($this->product->name);
     }
+
+    public function test_dashboard_displays_all_configured_payment_methods_including_qris_and_debit(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        $now = now('Asia/Jakarta');
+
+        $pmQris = PaymentMethod::firstOrCreate(
+            ['code' => 'qris_static'],
+            ['name' => 'QRIS Statis', 'type' => 'qris_static', 'is_active' => true]
+        );
+
+        $pmDebit = PaymentMethod::firstOrCreate(
+            ['code' => 'debit_bca'],
+            ['name' => 'Debit BCA', 'type' => 'debit_card', 'is_active' => true]
+        );
+
+        // Create completed order paid via QRIS
+        $order = Order::create([
+            'uuid' => (string) Str::uuid(),
+            'order_no' => 'ORD-QRIS-' . time(),
+            'branch_id' => $this->branch1->id,
+            'user_id' => $this->adminUser->id,
+            'order_type_id' => $this->orderType->id,
+            'status' => 'completed',
+            'business_date' => $now->toDateString(),
+            'subtotal' => 50000,
+            'total_amount' => 50000,
+            'client_created_at' => $now,
+        ]);
+
+        Payment::create([
+            'order_id' => $order->id,
+            'payment_method_id' => $pmQris->id,
+            'payment_method_name_snapshot' => $pmQris->name,
+            'amount' => 50000,
+            'paid_at' => $now,
+        ]);
+
+        $response = $this->get(route('dashboard', ['preset' => 'today']));
+        $response->assertStatus(200);
+
+        // Verify paymentStats is passed and contains all active methods
+        $response->assertViewHas('paymentStats', function ($stats) {
+            $names = array_column($stats, 'name');
+            return in_array('QRIS Statis', $names)
+                && in_array('Debit BCA', $names);
+        });
+
+        // Verify view displays QRIS and Debit
+        $response->assertSee('QRIS Statis');
+        $response->assertSee('Debit BCA');
+        $response->assertSee('Rp 50.000');
+    }
 }
