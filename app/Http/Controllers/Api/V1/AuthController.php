@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Device;
 use App\Models\DeviceActivationCode;
 use App\Models\User;
@@ -88,6 +89,37 @@ class AuthController extends Controller
 
         $this->auditLogger->record('auth.login', $user, [], ['method' => $passwordValid ? 'password' : 'pin']);
 
+        // Determine multi-branch access (FR-AUTH-04)
+        $canSwitchBranch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $accessibleBranches = $canSwitchBranch
+            ? Branch::where('is_active', true)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get()
+            : ($user->branch ? Branch::where('id', $user->branch_id)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get() : collect([]));
+
+        $assignedBranch = $user->branch ? [
+            'id' => $user->branch->id,
+            'name' => $user->branch->name,
+            'code' => $user->branch->code,
+            'phone' => $user->branch->phone,
+            'address' => $user->branch->address,
+            'tax_percent' => $user->branch->tax_percent,
+            'service_charge_percent' => $user->branch->service_charge_percent,
+            'tax_included' => $user->branch->tax_included,
+            'rounding_mode' => $user->branch->rounding_mode,
+        ] : ($accessibleBranches->first() ? [
+            'id' => $accessibleBranches->first()->id,
+            'name' => $accessibleBranches->first()->name,
+            'code' => $accessibleBranches->first()->code,
+            'phone' => $accessibleBranches->first()->phone,
+            'address' => $accessibleBranches->first()->address,
+            'tax_percent' => $accessibleBranches->first()->tax_percent,
+            'service_charge_percent' => $accessibleBranches->first()->service_charge_percent,
+            'tax_included' => $accessibleBranches->first()->tax_included,
+            'rounding_mode' => $accessibleBranches->first()->rounding_mode,
+        ] : null);
+
         return response()->json([
             'success' => true,
             'token' => $token,
@@ -96,12 +128,10 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'role' => $user->role,
-                'branch_id' => $user->branch_id,
-                'branch' => $user->branch ? [
-                    'id' => $user->branch->id,
-                    'name' => $user->branch->name,
-                    'code' => $user->branch->code,
-                ] : null,
+                'branch_id' => $assignedBranch ? $assignedBranch['id'] : $user->branch_id,
+                'branch' => $assignedBranch,
+                'can_switch_branch' => $canSwitchBranch,
+                'accessible_branches' => $accessibleBranches,
                 'permissions' => $user->getAllPermissions()->pluck('name'),
             ],
         ]);
@@ -160,7 +190,39 @@ class AuthController extends Controller
 
     public function user(Request $request): JsonResponse
     {
-        return response()->json($request->user()->load('branch'));
+        $user = $request->user()->load('branch');
+        $canSwitchBranch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $accessibleBranches = $canSwitchBranch
+            ? Branch::where('is_active', true)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get()
+            : ($user->branch ? Branch::where('id', $user->branch_id)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get() : collect([]));
+
+        $userData = $user->toArray();
+        $userData['can_switch_branch'] = $canSwitchBranch;
+        $userData['accessible_branches'] = $accessibleBranches;
+        $userData['permissions'] = $user->getAllPermissions()->pluck('name');
+
+        return response()->json($userData);
+    }
+
+    public function branches(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $canSwitchBranch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $branches = $canSwitchBranch
+            ? Branch::where('is_active', true)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get()
+            : ($user->branch ? Branch::where('id', $user->branch_id)->select('id', 'name', 'code', 'phone', 'address', 'tax_percent', 'service_charge_percent', 'tax_included', 'rounding_mode')->get() : collect([]));
+
+        return response()->json([
+            'success' => true,
+            'can_switch_branch' => $canSwitchBranch,
+            'branches' => $branches,
+        ]);
     }
 
     public function logout(Request $request): JsonResponse

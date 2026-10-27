@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Refund;
 use App\Models\Shift;
 use App\Services\AuditLogger;
+use App\Services\HoldBillService;
 use App\Services\OrderCalculator;
 use App\Services\PinAuthorizationService;
 use App\Services\ShiftService;
@@ -28,7 +29,8 @@ class OrderController extends Controller
     public function __construct(
         protected AuditLogger $auditLogger,
         protected PinAuthorizationService $pinService,
-        protected ShiftService $shiftService
+        protected ShiftService $shiftService,
+        protected HoldBillService $holdBillService
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -56,11 +58,38 @@ class OrderController extends Controller
         ]);
 
         $user = $request->user();
-        $branch = Branch::findOrFail($user->branch_id ?? 1);
-        $shift = Shift::findOrFail($validated['shift_id']);
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+
+        if ($requestedBranchId && $canSwitch) {
+            $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
+        } elseif ($user->branch_id) {
+            $branch = Branch::findOrFail($user->branch_id);
+        } else {
+            $branch = Branch::where('is_active', true)->firstOrFail();
+        }
+
+        $shift = Shift::find($validated['shift_id']);
+
+        if (! $shift || $shift->status !== 'open') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaksi ditolak. Kasir wajib melakukan Open Shift terlebih dahulu.',
+            ], 403);
+        }
 
         // Assert shift is active and <= 23 hours
-        $this->shiftService->assertOpenAndFresh($shift);
+        try {
+            $this->shiftService->assertOpenAndFresh($shift);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 403);
+        }
 
         // Calculate subtotal
         $subtotal = 0;
@@ -77,7 +106,7 @@ class OrderController extends Controller
         $manualDiscount = $validated['manual_discount'] ?? 0;
         $requiresPin = false;
 
-        // Check discount thresholds (FSD-07): percent > 10% OR nominal > 20.000 requires PIN Diskon
+        // Check discount thresholds (FSD-07)
         if ($manualDiscount > 0) {
             $percent = $subtotal > 0 ? ($manualDiscount / $subtotal) * 100 : 0;
             if ($percent > $branch->discount_percent_threshold || $manualDiscount > $branch->discount_amount_threshold) {
@@ -195,9 +224,140 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pesanan berhasil disimpan.',
-            'order' => $order->load(['items', 'payments']),
+            'order' => $order->load(['items.modifiers', 'payments']),
             'calculation' => $calc,
         ], 201);
+    }
+
+    /**
+     * Park/Hold active order temporarily.
+     */
+    public function hold(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'uuid' => 'nullable|uuid',
+            'order_type_id' => 'required|exists:order_types,id',
+            'table_id' => 'nullable|exists:tables,id',
+            'customer_id' => 'nullable|exists:customers,id',
+            'shift_id' => 'required|exists:shifts,id',
+            'hold_reference' => 'nullable|string',
+            'hold_notes' => 'nullable|string',
+            'customer_name' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_variant_id' => 'nullable|exists:product_variants,id',
+            'items.*.product_name' => 'required|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.modifiers' => 'nullable|array',
+            'promo_discount' => 'nullable|integer|min:0',
+            'voucher_discount' => 'nullable|integer|min:0',
+            'loyalty_discount' => 'nullable|integer|min:0',
+            'manual_discount' => 'nullable|integer|min:0',
+            'manual_discount_reason' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $branch = Branch::findOrFail($user->branch_id ?? 1);
+        $shift = Shift::find($validated['shift_id']);
+
+        if (! $shift || $shift->status !== 'open') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hold Bill ditolak. Kasir wajib memiliki shift aktif.',
+            ], 403);
+        }
+
+        try {
+            $order = $this->holdBillService->hold($user, $branch, $shift, $validated);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Pesanan berhasil ditahan sementara (Hold Bill #{$order->order_no}).",
+                'order' => $order,
+            ], 201);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * List open Hold Bills for the cashier's branch.
+     */
+    public function heldOrders(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $branchId = $user->branch_id ?? 1;
+        $shiftId = $request->query('shift_id');
+
+        $heldBills = $this->holdBillService->listHeld($branchId, $shiftId ? (int) $shiftId : null);
+
+        return response()->json([
+            'success' => true,
+            'count' => $heldBills->count(),
+            'held_bills' => $heldBills,
+        ]);
+    }
+
+    /**
+     * Resume a Hold Bill to cart / checkout.
+     */
+    public function resume(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $activeShift = Shift::where('user_id', $user->id)->where('status', 'open')->latest('id')->first();
+
+        if (! $activeShift) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Harap buka shift kasir terlebih dahulu untuk melanjutkan transaksi Hold Bill ini.',
+            ], 403);
+        }
+
+        try {
+            $order = $this->holdBillService->resume($id, $user, $activeShift);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi Hold Bill berhasil dilanjutkan.',
+                'order' => $order,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Cancel a Hold Bill.
+     */
+    public function cancelHold(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|min:3',
+        ]);
+
+        $user = $request->user();
+
+        try {
+            $order = $this->holdBillService->cancel($id, $user, $validated['reason']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi Hold Bill berhasil dibatalkan.',
+                'order' => $order,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
     }
 
     public function void(Request $request, Order $order): JsonResponse

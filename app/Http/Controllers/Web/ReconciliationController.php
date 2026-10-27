@@ -30,6 +30,13 @@ class ReconciliationController extends Controller
         return view('backoffice.reconciliation.index', compact('shifts'));
     }
 
+    public function report(Shift $shift): View
+    {
+        $report = $this->shiftService->generateCloseShiftReport($shift);
+
+        return view('backoffice.reconciliation.report', compact('shift', 'report'));
+    }
+
     public function reconcile(Request $request, Shift $shift): RedirectResponse
     {
         $request->validate([

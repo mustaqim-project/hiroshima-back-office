@@ -21,8 +21,19 @@ class SyncController extends Controller
     public function pull(Request $request): JsonResponse
     {
         $user = $request->user();
-        $branchId = $user->branch_id ?? 1;
-        $branch = Branch::findOrFail($branchId);
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
+
+        if ($requestedBranchId && $canSwitch) {
+            $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
+        } elseif ($user->branch_id) {
+            $branch = Branch::findOrFail($user->branch_id);
+        } else {
+            $branch = Branch::where('is_active', true)->firstOrFail();
+        }
 
         $since = $request->query('since');
         $data = $this->syncEngine->pull($branch, $since);
@@ -46,7 +57,19 @@ class SyncController extends Controller
         ]);
 
         $user = $request->user();
-        $branch = Branch::findOrFail($user->branch_id ?? 1);
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+
+        if ($requestedBranchId && $canSwitch) {
+            $branch = Branch::where('is_active', true)->findOrFail($requestedBranchId);
+        } elseif ($user->branch_id) {
+            $branch = Branch::findOrFail($user->branch_id);
+        } else {
+            $branch = Branch::where('is_active', true)->firstOrFail();
+        }
 
         $deviceToken = $request->header('X-Device-Token');
         $device = $deviceToken ? Device::where('device_token_hash', hash('sha256', $deviceToken))->first() : null;

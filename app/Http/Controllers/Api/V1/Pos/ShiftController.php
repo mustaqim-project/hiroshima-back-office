@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1\Pos;
 
+use App\Exceptions\HoldBillPendingException;
+use App\Exceptions\UnfinalizedTransactionException;
 use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\Shift;
@@ -72,7 +74,19 @@ class ShiftController extends Controller
         ]);
 
         $user = $request->user();
-        $branchId = $user->branch_id ?? 1;
+        $canSwitch = is_null($user->branch_id)
+            || in_array($user->role, ['owner', 'central_admin'])
+            || $user->can('branch.manage');
+
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');
+
+        if ($requestedBranchId && $canSwitch) {
+            $branchId = (int)$requestedBranchId;
+        } elseif ($user->branch_id) {
+            $branchId = (int)$user->branch_id;
+        } else {
+            $branchId = (int)(\App\Models\Branch::where('is_active', true)->value('id') ?? 1);
+        }
 
         try {
             $shift = $this->shiftService->open(
@@ -112,22 +126,77 @@ class ShiftController extends Controller
         if (! $shift) {
             return response()->json([
                 'success' => false,
-                'message' => 'Tidak ditemukan shift aktif yang dapat ditutup.',
+                'message' => 'Tidak ditemukan shift aktif yang dapat ditutup. Harap buka shift terlebih dahulu.',
             ], 404);
         }
 
-        $closedShift = $this->shiftService->close($shift, $validated['actual_cash']);
+        try {
+            $closedShift = $this->shiftService->close($shift, $validated['actual_cash']);
+            $report = $this->shiftService->generateCloseShiftReport($closedShift);
 
-        $this->auditLogger->record('shift.closed', $closedShift, [], [
-            'expected_cash' => $closedShift->expected_cash,
-            'actual_cash' => $closedShift->actual_cash,
-            'difference' => $closedShift->cash_difference,
-        ]);
+            $this->auditLogger->record('shift.closed', $closedShift, [], [
+                'expected_cash' => $closedShift->expected_cash,
+                'actual_cash' => $closedShift->actual_cash,
+                'difference' => $closedShift->cash_difference,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Shift berhasil ditutup.',
+                'shift' => $closedShift,
+                'report' => $report,
+            ]);
+        } catch (HoldBillPendingException $e) {
+            return response()->json([
+                'success' => false,
+                'error_code' => 'HOLD_BILLS_PENDING',
+                'message' => $e->getMessage(),
+                'held_bills' => $e->getHeldBills(),
+            ], 422);
+        } catch (UnfinalizedTransactionException $e) {
+            return response()->json([
+                'success' => false,
+                'error_code' => 'UNFINALIZED_TRANSACTIONS',
+                'message' => $e->getMessage(),
+                'unfinalized_orders' => $e->getOrders(),
+            ], 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    public function report(Request $request, Shift $shift): JsonResponse
+    {
+        $report = $this->shiftService->generateCloseShiftReport($shift);
 
         return response()->json([
             'success' => true,
-            'message' => 'Shift berhasil ditutup.',
-            'shift' => $closedShift,
+            'report' => $report,
+        ]);
+    }
+
+    public function currentReport(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $shift = Shift::where('user_id', $user->id)
+            ->latest('id')
+            ->first();
+
+        if (! $shift) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data shift tidak ditemukan.',
+            ], 404);
+        }
+
+        $report = $this->shiftService->generateCloseShiftReport($shift);
+
+        return response()->json([
+            'success' => true,
+            'report' => $report,
         ]);
     }
 
@@ -149,6 +218,15 @@ class ShiftController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Harap buka shift kasir terlebih dahulu.',
+            ], 403);
+        }
+
+        try {
+            $this->shiftService->assertOpenAndFresh($shift);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
             ], 403);
         }
 

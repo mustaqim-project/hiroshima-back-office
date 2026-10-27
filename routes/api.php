@@ -24,13 +24,20 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/user', [AuthController::class, 'user']);
+        Route::get('/branches', [AuthController::class, 'branches']);
 
         // Orders & POS Transactions
         Route::post('/orders', [OrderController::class, 'store']);
+        Route::post('/orders/hold', [OrderController::class, 'hold']);
+        Route::get('/orders/held', [OrderController::class, 'heldOrders']);
+        Route::post('/orders/{id}/resume', [OrderController::class, 'resume']);
+        Route::post('/orders/{id}/cancel-hold', [OrderController::class, 'cancelHold']);
         Route::post('/orders/{order}/void', [OrderController::class, 'void']);
 
         // Shift & Cash Management
         Route::get('/shifts/current', [ShiftController::class, 'current']);
+        Route::get('/shifts/current/report', [ShiftController::class, 'currentReport']);
+        Route::get('/shifts/{shift}/report', [ShiftController::class, 'report']);
         Route::post('/shifts/open', [ShiftController::class, 'open']);
         Route::post('/shifts/close', [ShiftController::class, 'close']);
         Route::post('/shifts/cash-movement', [ShiftController::class, 'cashMovement']);

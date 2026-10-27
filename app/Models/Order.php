@@ -41,6 +41,11 @@ class Order extends Model
         'cost_amount',
         'client_created_at',
         'synced_at',
+        'held_at',
+        'hold_reference',
+        'hold_notes',
+        'held_by',
+        'is_unresolved_hold',
         'clock_skew_flag',
         'sync_status',
         'void_reason',
@@ -65,6 +70,8 @@ class Order extends Model
         'clock_skew_flag' => 'boolean',
         'client_created_at' => 'datetime',
         'synced_at' => 'datetime',
+        'held_at' => 'datetime',
+        'is_unresolved_hold' => 'boolean',
         'voided_at' => 'datetime',
     ];
 
@@ -96,5 +103,10 @@ class Order extends Model
     public function shift()
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function heldByUser()
+    {
+        return $this->belongsTo(User::class, 'held_by');
     }
 }

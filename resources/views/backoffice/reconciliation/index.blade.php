@@ -61,15 +61,20 @@
                         @endif
                     </td>
                     <td>
-                        @if($s->status !== 'reconciled')
-                            <form method="POST" action="{{ route('reconciliation.reconcile', $s) }}" style="display: flex; gap: 8px;">
-                                @csrf
-                                <input type="text" name="notes" placeholder="Catatan rekonsiliasi..." required style="padding: 6px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px;">
-                                <button type="submit" class="btn btn-primary btn-sm">Setujui</button>
-                            </form>
-                        @else
-                            <span style="font-size: 12px; color: var(--text-muted);">{{ $s->reconciliation_notes }}</span>
-                        @endif
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <a href="{{ route('reconciliation.report', $s) }}" class="btn btn-outline btn-sm" target="_blank" title="Cetak / Lihat Laporan Close Shift">
+                                <x-icon name="printer" size="13" /> Laporan
+                            </a>
+                            @if($s->status !== 'reconciled')
+                                <form method="POST" action="{{ route('reconciliation.reconcile', $s) }}" style="display: flex; gap: 6px;">
+                                    @csrf
+                                    <input type="text" name="notes" placeholder="Catatan..." required style="padding: 5px 8px; font-size: 11px; border: 1px solid var(--border); border-radius: 6px; width: 110px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">Setujui</button>
+                                </form>
+                            @else
+                                <span style="font-size: 11px; color: var(--text-muted);">{{ Str::limit($s->reconciliation_notes, 20) }}</span>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty

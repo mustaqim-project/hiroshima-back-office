@@ -24,6 +24,8 @@ class Shift extends Model
         'actual_cash',
         'cash_difference',
         'status',
+        'close_type',
+        'close_reason',
         'reconciled_by',
         'reconciled_at',
         'reconciliation_notes',

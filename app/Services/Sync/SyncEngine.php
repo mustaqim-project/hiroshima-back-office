@@ -75,6 +75,7 @@ class SyncEngine
                 'app_name' => \App\Models\Setting::getAppName(),
                 'app_tagline' => \App\Models\Setting::getAppTagline(),
                 'app_logo_url' => \App\Models\Setting::getLogoUrl(),
+                'hold_bill_enabled' => \App\Models\Setting::isHoldBillEnabled(),
             ],
         ];
     }

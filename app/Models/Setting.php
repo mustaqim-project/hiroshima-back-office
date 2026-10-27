@@ -161,6 +161,16 @@ class Setting extends Model
         }
     }
 
+    public static function isHoldBillEnabled(): bool
+    {
+        try {
+            $val = static::get('hold_bill_enabled', '1');
+            return filter_var($val, FILTER_VALIDATE_BOOLEAN);
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
     public static function getSupportPhone(): string
     {
         try {

@@ -162,6 +162,25 @@
                 </div>
             </div>
 
+            <!-- Card 4: Fitur Transaksi & Kasir POS -->
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <div class="card-title">4. Pengaturan Fitur POS & Kasir</div>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                    <label style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer;">
+                        <input type="checkbox" name="hold_bill_enabled" value="1" {{ !empty($settings['hold_bill_enabled']) ? 'checked' : '' }} style="width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary);">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">Aktifkan Fitur Tahan Pesanan (Hold Bill) pada POS</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; line-height: 1.4;">
+                                Jika aktif, kasir di tablet POS dapat menahan (park) transaksi sementara untuk melayani pelanggan lain. Jika dinonaktifkan, pembuatan Hold Bill baru akan diblokir, namun kasir tetap diizinkan menyelesaikan atau membatalkan bill yang sudah ada.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div style="display: flex; justify-content: flex-end;">
                 <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 15px; font-weight: 700;">
                     <x-icon name="check" size="16" /> <span style="margin-left: 8px;">Simpan Perubahan Identitas</span>

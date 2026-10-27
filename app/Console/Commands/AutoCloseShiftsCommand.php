@@ -10,7 +10,8 @@ use Illuminate\Console\Command;
  */
 class AutoCloseShiftsCommand extends Command
 {
-    protected $signature = 'shifts:auto-close';
+    protected $signature = 'shifts:auto-close {--force}';
+    protected $aliases = ['shift:auto-close'];
     protected $description = 'Menutup otomatis shift kasir yang telah beroperasi selama 23 jam';
 
     public function handle(ShiftService $shiftService): int

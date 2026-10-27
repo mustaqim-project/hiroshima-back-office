@@ -29,6 +29,7 @@ class GeneralSettingController extends Controller
             'footer_text' => Setting::get('footer_text', '© ' . date('Y') . ' Hiroshima Japanese Street Food. All rights reserved.'),
             'support_email' => Setting::get('support_email', 'hiroshimajapanese@gmail.com'),
             'support_phone' => Setting::get('support_phone', ''),
+            'hold_bill_enabled' => Setting::isHoldBillEnabled(),
         ];
 
         return view('backoffice.settings.general', compact('settings'));
@@ -64,6 +65,7 @@ class GeneralSettingController extends Controller
         Setting::set('footer_text', $validated['footer_text'] ?? '', 'general');
         Setting::set('support_email', $validated['support_email'] ?? '', 'general');
         Setting::set('support_phone', $validated['support_phone'] ?? '', 'general');
+        Setting::set('hold_bill_enabled', $request->has('hold_bill_enabled') ? '1' : '0', 'general');
 
         // Handle Logo Removal
         if ($request->boolean('remove_logo')) {

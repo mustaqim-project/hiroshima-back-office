@@ -79,8 +79,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('ingredients', IngredientController::class);
         Route::resource('promos', PromoController::class);
 
-        // Rekonsiliasi Shift
+        // Rekonsiliasi Shift & Cetak Laporan Close Shift
         Route::get('/reconciliation', [ReconciliationController::class, 'index'])->name('reconciliation.index');
+        Route::get('/reconciliation/{shift}/report', [ReconciliationController::class, 'report'])->name('reconciliation.report');
         Route::post('/reconciliation/{shift}', [ReconciliationController::class, 'reconcile'])->name('reconciliation.reconcile');
 
         // 23 Laporan Komprehensif & Ekspor Excel (Single & Multi-Sheet Full Package)
