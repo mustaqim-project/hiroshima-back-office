@@ -64,6 +64,22 @@ class ProductController extends Controller
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('products', 'public');
             $validated['image_path'] = '/storage/' . $path;
+
+            try {
+                $target = public_path('storage/' . $path);
+                if (!file_exists(dirname($target))) {
+                    @mkdir(dirname($target), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $target);
+            } catch (\Throwable) {}
+
+            try {
+                $target = public_path('storage/' . $path);
+                if (!file_exists(dirname($target))) {
+                    @mkdir(dirname($target), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $target);
+            } catch (\Throwable) {}
         }
 
         $basePrice = $validated['base_price'] ?? null;
@@ -199,6 +215,14 @@ class ProductController extends Controller
             }
             $path = $request->file('photo')->store('products', 'public');
             $validated['image_path'] = '/storage/' . $path;
+
+            try {
+                $target = public_path('storage/' . $path);
+                if (!file_exists(dirname($target))) {
+                    @mkdir(dirname($target), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $target);
+            } catch (\Throwable) {}
         }
 
         $basePrice = $validated['base_price'] ?? null;

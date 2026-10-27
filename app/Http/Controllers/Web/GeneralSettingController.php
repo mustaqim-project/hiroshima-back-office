@@ -71,6 +71,10 @@ class GeneralSettingController extends Controller
             if ($existingLogo && Storage::disk('public')->exists($existingLogo)) {
                 Storage::disk('public')->delete($existingLogo);
             }
+            $publicPath = public_path('storage/' . $existingLogo);
+            if ($existingLogo && file_exists($publicPath) && !is_dir($publicPath)) {
+                @unlink($publicPath);
+            }
             Setting::set('app_logo', null, 'general');
         }
 
@@ -83,6 +87,15 @@ class GeneralSettingController extends Controller
             }
             $path = $file->store('branding', 'public');
             Setting::set('app_logo', $path, 'general');
+
+            // Mirror to public/storage for environments where symlink is restricted
+            try {
+                $publicTarget = public_path('storage/' . $path);
+                if (!file_exists(dirname($publicTarget))) {
+                    @mkdir(dirname($publicTarget), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $publicTarget);
+            } catch (\Throwable) {}
         }
 
         // Handle Favicon Removal
@@ -90,6 +103,10 @@ class GeneralSettingController extends Controller
             $existingFavicon = Setting::get('app_favicon');
             if ($existingFavicon && Storage::disk('public')->exists($existingFavicon)) {
                 Storage::disk('public')->delete($existingFavicon);
+            }
+            $publicPath = public_path('storage/' . $existingFavicon);
+            if ($existingFavicon && file_exists($publicPath) && !is_dir($publicPath)) {
+                @unlink($publicPath);
             }
             Setting::set('app_favicon', null, 'general');
         }
@@ -103,6 +120,15 @@ class GeneralSettingController extends Controller
             }
             $path = $file->store('branding', 'public');
             Setting::set('app_favicon', $path, 'general');
+
+            // Mirror to public/storage for environments where symlink is restricted
+            try {
+                $publicTarget = public_path('storage/' . $path);
+                if (!file_exists(dirname($publicTarget))) {
+                    @mkdir(dirname($publicTarget), 0755, true);
+                }
+                @copy(storage_path('app/public/' . $path), $publicTarget);
+            } catch (\Throwable) {}
         }
 
         $newValues = [

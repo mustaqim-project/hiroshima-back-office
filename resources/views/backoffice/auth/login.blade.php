@@ -143,10 +143,14 @@
         <div class="brand-header">
             @if(\App\Models\Setting::getLogoUrl())
                 <div>
-                    <img src="{{ \App\Models\Setting::getLogoUrl() }}" alt="{{ \App\Models\Setting::getAppName() }}" class="brand-logo-img">
+                    <img src="{{ \App\Models\Setting::getLogoUrl() }}" 
+                         alt="{{ \App\Models\Setting::getAppName() }}" 
+                         class="brand-logo-img"
+                         onerror="this.style.display='none'; document.getElementById('login-brand-fallback-badge').style.display='inline-flex';">
+                    <div id="login-brand-fallback-badge" class="brand-badge" style="display: none; margin-bottom: 12px;">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
                 </div>
             @else
-                <div class="brand-badge">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
+                <div class="brand-badge" style="margin-bottom: 12px;">{{ strtoupper(substr(\App\Models\Setting::getAppName(), 0, 1)) }}</div>
             @endif
             <h1 class="brand-title">{{ \App\Models\Setting::getAppName() }}</h1>
             <p class="brand-subtitle">{{ \App\Models\Setting::getAppTagline() }}</p>

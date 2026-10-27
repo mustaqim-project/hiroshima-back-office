@@ -1,6 +1,26 @@
 @extends('layouts.app', ['title' => 'Dashboard Eksekutif & Operasional'])
 
 @section('content')
+<style>
+    .dash-grid-2-1 {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    .dash-grid-2-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+    @media (max-width: 991px) {
+        .dash-grid-2-1, .dash-grid-2-col {
+            grid-template-columns: 1fr !important;
+            gap: 16px;
+        }
+    }
+</style>
 <div style="margin-bottom: 20px;">
     <!-- Dashboard Header Title & Action Buttons -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;">
@@ -324,7 +344,7 @@
     </div>
 
     <!-- Section: Interactive Visual Charts (Row 3: Tren & Trafik Jam Sibuk) -->
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+    <div class="dash-grid-2-1">
         <!-- Chart 1: Tren Penjualan & Transaksi Harian -->
         <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
@@ -397,7 +417,7 @@
     </div>
 
     <!-- Section: Leaderboard Menu Terlaris & Recent Feeds -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+    <div class="dash-grid-2-col">
         <!-- Top 6 Menu Terlaris (Leaderboard) -->
         <div class="card" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">

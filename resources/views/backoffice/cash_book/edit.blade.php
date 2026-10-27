@@ -90,8 +90,11 @@
             </label>
 
             @if($cashBook->receipt_photo_path)
+                @php
+                    $receiptUrl = '/storage/' . ltrim(str_replace('storage/', '', $cashBook->receipt_photo_path), '/');
+                @endphp
                 <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
-                    <img src="{{ asset('storage/' . $cashBook->receipt_photo_path) }}" alt="Foto Lama" style="height: 60px; border-radius: 6px; border: 1px solid var(--border);">
+                    <img src="{{ $receiptUrl }}" alt="Foto Lama" style="height: 60px; border-radius: 6px; border: 1px solid var(--border);" onerror="this.style.display='none'">
                     <span style="font-size: 12px; color: var(--text-muted);">Foto saat ini terpasang</span>
                 </div>
             @endif

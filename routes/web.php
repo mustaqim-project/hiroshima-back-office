@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\PromoController;
 use App\Http\Controllers\Web\ReconciliationController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\SmtpSettingController;
+use App\Http\Controllers\Web\StorageFileController;
 use App\Http\Controllers\Web\TableController;
 use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,11 @@ use Illuminate\Support\Facades\Route;
 /**
  * @req FR-WEB-01, FR-WEB-02, FR-WEB-03, FR-WEB-04, FR-WEB-05, FR-WEB-06, FR-WEB-07, FR-WEB-08, FR-WEB-09, FR-WEB-10, FR-AUTH-01, FR-AUTH-03, RPT-01, RPT-25
  */
+
+// Storage Asset Route (Seamless fallback for shared hosting / missing symlink)
+Route::get('/storage/{path}', [StorageFileController::class, 'show'])
+    ->where('path', '.*')
+    ->name('storage.file');
 
 // Public Web Authentication
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

@@ -145,8 +145,11 @@
                     </td>
                     <td style="text-align: center;">
                         @if($t->receipt_photo_path)
-                            <button type="button" onclick="openPhotoModal('{{ asset('storage/' . $t->receipt_photo_path) }}')" style="border: none; background: none; cursor: pointer; padding: 0;">
-                                <img src="{{ asset('storage/' . $t->receipt_photo_path) }}" alt="Bukti Foto" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+                            @php
+                                $receiptUrl = '/storage/' . ltrim(str_replace('storage/', '', $t->receipt_photo_path), '/');
+                            @endphp
+                            <button type="button" onclick="openPhotoModal('{{ $receiptUrl }}')" style="border: none; background: none; cursor: pointer; padding: 0;">
+                                <img src="{{ $receiptUrl }}" alt="Bukti Foto" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);" onerror="this.src='{{ asset('favicon.ico') }}';">
                             </button>
                         @else
                             <span style="font-size: 11px; color: var(--text-muted);">Tanpa Foto</span>

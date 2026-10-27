@@ -15,10 +15,37 @@
     </div>
 </div>
 
+<style>
+    .settings-layout-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    .settings-two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    @media (max-width: 991px) {
+        .settings-layout-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
+    @media (max-width: 639px) {
+        .settings-two-col {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+</style>
+
 <form method="POST" action="{{ route('settings.general.update') }}" enctype="multipart/form-data">
     @csrf
 
-    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+    <div class="settings-layout-grid">
         <div style="display: flex; flex-direction: column; gap: 24px;">
             <!-- Card 1: Identitas Teks -->
             <div class="card" style="margin-bottom: 0;">
@@ -26,7 +53,7 @@
                     <div class="card-title">1. Nama Sistem & Badan Usaha</div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="settings-two-col">
                     <div>
                         <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Nama Sistem / Aplikasi <span style="color: #dc2626;">*</span></label>
                         <input type="text" id="app_name" name="app_name" value="{{ old('app_name', $settings['app_name']) }}" required placeholder="Contoh: HIROSHIMA POS" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-weight: 600;" oninput="updateLivePreview()">
@@ -58,14 +85,21 @@
                     <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                         <div id="logo-preview-box" style="width: 120px; height: 70px; background: #0f172a; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid var(--border); overflow: hidden;">
                             @if($settings['app_logo_url'])
-                                <img id="preview-logo-img" src="{{ $settings['app_logo_url'] }}" alt="Logo" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                <img id="preview-logo-img" 
+                                     src="{{ $settings['app_logo_url'] }}" 
+                                     alt="Logo" 
+                                     onerror="this.style.display='none'; if(document.getElementById('preview-logo-placeholder')) document.getElementById('preview-logo-placeholder').style.display='flex';"
+                                     style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                <div id="preview-logo-placeholder" style="display: none; background: var(--primary); color: #fff; width: 38px; height: 38px; border-radius: 8px; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">
+                                    {{ strtoupper(substr($settings['app_name'], 0, 1)) }}
+                                </div>
                             @else
                                 <div id="preview-logo-placeholder" style="background: var(--primary); color: #fff; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">
                                     {{ strtoupper(substr($settings['app_name'], 0, 1)) }}
                                 </div>
                             @endif
                         </div>
-                        <div style="flex: 1; min-width: 240px;">
+                        <div style="flex: 1; min-width: 220px;">
                             <input type="file" name="app_logo" id="app_logo" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="font-size: 13px; width: 100%; margin-bottom: 6px;" onchange="previewUploadedImage(this, 'preview-logo-img', 'logo-preview-box')">
                             <div style="font-size: 11px; color: var(--text-muted);">
                                 Format: PNG, JPG, WEBP, atau SVG (Maks. 2MB). Disarankan latar transparan (PNG/SVG).

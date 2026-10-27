@@ -109,9 +109,17 @@ class Setting extends Model
     {
         try {
             $logo = static::get('app_logo');
-            if ($logo) {
-                return asset('storage/' . $logo);
+            if (empty($logo)) {
+                return null;
             }
+            if (str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://') || str_starts_with($logo, 'data:')) {
+                return $logo;
+            }
+            $clean = ltrim($logo, '/');
+            if (str_starts_with($clean, 'storage/')) {
+                $clean = substr($clean, 8);
+            }
+            return '/storage/' . $clean;
         } catch (\Throwable) {}
         return null;
     }
@@ -120,9 +128,17 @@ class Setting extends Model
     {
         try {
             $favicon = static::get('app_favicon');
-            if ($favicon) {
-                return asset('storage/' . $favicon);
+            if (empty($favicon)) {
+                return null;
             }
+            if (str_starts_with($favicon, 'http://') || str_starts_with($favicon, 'https://')) {
+                return $favicon;
+            }
+            $clean = ltrim($favicon, '/');
+            if (str_starts_with($clean, 'storage/')) {
+                $clean = substr($clean, 8);
+            }
+            return '/storage/' . $clean;
         } catch (\Throwable) {}
         return null;
     }

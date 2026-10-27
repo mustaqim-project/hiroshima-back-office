@@ -31,7 +31,19 @@
                 <tr>
                     <td style="width: 56px;">
                         @if($p->image_path)
-                            <img src="{{ $p->image_path }}" alt="{{ $p->name }}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                            <img src="{{ $p->image_path }}" 
+                                 alt="{{ $p->name }}" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                 style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                            <div style="display: none; width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; align-items: center; justify-content: center; color: #64748b; border: 1px solid #e2e8f0;" title="Ikon Standar Produk">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                                </svg>
+                            </div>
                         @else
                             <div style="width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; border: 1px solid #e2e8f0;" title="Ikon Standar Produk">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

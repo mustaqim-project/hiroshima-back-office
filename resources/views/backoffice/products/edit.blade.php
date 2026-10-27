@@ -43,7 +43,7 @@
             <div style="display: flex; gap: 16px; align-items: center;">
                 <div id="photoPreviewBox" style="width: 72px; height: 72px; border-radius: 10px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; border: 1px solid var(--border); overflow: hidden; flex-shrink: 0;">
                     @if($product->image_path)
-                        <img id="photoPreviewImg" src="{{ $product->image_path }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img id="photoPreviewImg" src="{{ $product->image_path }}" onerror="this.style.display='none'; document.getElementById('defaultIconSvg').style.display='block';" style="width: 100%; height: 100%; object-fit: cover;">
                         <svg id="defaultIconSvg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
                             <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
                             <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
