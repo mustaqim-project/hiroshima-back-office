@@ -57,22 +57,20 @@ class AppDownloadTest extends TestCase
         $response->assertSee('Panduan Instalasi di Tablet / Smartphone Android');
     }
 
-    public function test_dashboard_displays_download_app_button_and_banner(): void
+    public function test_dashboard_keeps_clean_layout_without_duplicate_download_clutter(): void
     {
         $response = $this->actingAs($this->admin)->get(route('dashboard'));
         $response->assertStatus(200);
-        $response->assertSee('Download App Hiroshima');
-        $response->assertSee('Aplikasi Mobile Kasir POS (Hiroshima)');
-        $response->assertSee('Download Release APK Hiroshima');
+        $response->assertDontSee('Download Release APK Hiroshima');
     }
 
-    public function test_backoffice_layout_has_topbar_and_sidebar_download_links(): void
+    public function test_backoffice_layout_has_clean_sidebar_download_link_without_topbar_clutter(): void
     {
         $response = $this->actingAs($this->admin)->get(route('products.index'));
         $response->assertStatus(200);
-        $response->assertSee('Download App Hiroshima');
         $response->assertSee('APLIKASI MOBILE');
         $response->assertSee('Download Hiroshima');
+        $response->assertDontSee('topbar-download-btn');
     }
 
     public function test_custom_apk_url_redirects_when_configured(): void

@@ -390,9 +390,6 @@
                 text-align: center;
                 padding: 14px 16px 20px !important;
             }
-            .topbar-download-btn span {
-                display: none;
-            }
         }
     </style>
 </head>
@@ -447,11 +444,6 @@
             <li class="nav-section-label">PENGATURAN</li>
             <li><a href="{{ route('settings.general') }}" class="nav-link {{ request()->routeIs('settings.general*') ? 'active' : '' }}"><x-icon name="settings" size="18" /> <span>Pengaturan Umum</span></a></li>
             <li><a href="{{ route('settings.smtp') }}" class="nav-link {{ request()->routeIs('settings.smtp*') ? 'active' : '' }}"><x-icon name="mail" size="18" /> <span>Email & SMTP</span></a></li>
-            <li id="sidebar-pwa-item" style="display: none;">
-                <a href="javascript:void(0)" onclick="window.hiroshimaInstallPWA && window.hiroshimaInstallPWA()" class="nav-link" style="color: #38bdf8;">
-                    <x-icon name="smartphone" size="18" /> <span>Pasang PWA Backoffice</span>
-                </a>
-            </li>
 
             <li class="nav-section-label">APLIKASI MOBILE</li>
             <li>
@@ -485,15 +477,7 @@
                 </div>
             </div>
 
-            <div class="header-actions" style="display: flex; align-items: center; gap: 10px;">
-                <a href="{{ route('app.download') }}" class="btn btn-outline btn-sm topbar-download-btn" style="border-color: #cbd5e1; color: #0f172a; font-weight: 600; gap: 6px; padding: 6px 12px; background: #ffffff;" title="Unduh Aplikasi Mobile Hiroshima (APK)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    <span>Download App Hiroshima</span>
-                </a>
+            <div class="header-actions" style="display: flex; align-items: center; gap: 12px;">
                 <span class="badge badge-info topbar-tz-badge">WIB (Asia/Jakarta)</span>
                 @auth
                     <div style="display: flex; align-items: center; gap: 10px;">
