@@ -15,13 +15,6 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExcelDataService
@@ -154,6 +147,25 @@ class ExcelDataService
      * Export existing data as Excel (.xlsx).
      * If no data exists, outputs the template with dummy data.
      */
+    /**
+     * Column index (1-based) to Excel column letter ('A', 'Z', 'AA', etc.)
+     */
+    public static function columnLetter(int $colIndex): string
+    {
+        $letter = '';
+        while ($colIndex > 0) {
+            $mod = ($colIndex - 1) % 26;
+            $letter = chr(65 + $mod) . $letter;
+            $colIndex = intval(($colIndex - $mod) / 26);
+        }
+        return $letter;
+    }
+
+    /**
+     * Export existing data as Excel (.xlsx).
+     * If no data exists, outputs the template with dummy data.
+     * Uses zero-dependency Native OpenXML Engine with automatic CSV fallback.
+     */
     public function export(string $module, bool $isTemplateOnly = false): StreamedResponse
     {
         $config = $this->getModuleConfig($module);
@@ -169,80 +181,186 @@ class ExcelDataService
             $rows = $config['dummy'];
         }
 
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle(substr($config['filename'], 0, 31));
-
-        // Styling palette
-        $headerFill = [
-            'fillType' => Fill::FILL_SOLID,
-            'startColor' => ['rgb' => '0F172A'], // Dark navy
-        ];
-        $headerFont = [
-            'name' => 'Segoe UI',
-            'bold' => true,
-            'color' => ['rgb' => 'FFFFFF'],
-            'size' => 11,
-        ];
-        $borderStyle = [
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => 'CBD5E1'],
-                ],
-            ],
-        ];
-
-        // Write Headers
-        foreach ($headers as $colIdx => $headerText) {
-            $colLetter = Coordinate::stringFromColumnIndex($colIdx + 1);
-            $sheet->setCellValue("{$colLetter}1", $headerText);
-        }
-
-        $lastColLetter = Coordinate::stringFromColumnIndex(count($headers));
-        $headerRange = "A1:{$lastColLetter}1";
-
-        $sheet->getStyle($headerRange)->applyFromArray([
-            'fill' => $headerFill,
-            'font' => $headerFont,
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical' => Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-        $sheet->getRowDimension(1)->setRowHeight(28);
-
-        // Write Data Rows
-        $currentRow = 2;
-        foreach ($rows as $row) {
-            foreach ($row as $colIdx => $val) {
-                $colLetter = Coordinate::stringFromColumnIndex($colIdx + 1);
-                $sheet->setCellValue("{$colLetter}{$currentRow}", $val);
-            }
-            $sheet->getRowDimension($currentRow)->setRowHeight(22);
-            $currentRow++;
-        }
-
-        $lastRow = max(2, $currentRow - 1);
-        $sheet->getStyle("A1:{$lastColLetter}{$lastRow}")->applyFromArray($borderStyle);
-
-        // Auto-fit column widths
-        foreach (range(1, count($headers)) as $colIdx) {
-            $colLetter = Coordinate::stringFromColumnIndex($colIdx);
-            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
-        }
-
         $filenameSuffix = $isTemplateOnly ? 'Template' : date('Ymd_His');
         $filename = "{$config['filename']}_{$filenameSuffix}.xlsx";
 
-        return new StreamedResponse(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
+        // 1. Native OpenXML (.xlsx) generation via PHP ZipArchive (Standard PHP extension)
+        if (class_exists(\ZipArchive::class)) {
+            try {
+                $tempPath = $this->createOpenXmlSpreadsheet($config['filename'], $headers, $rows);
+
+                return new StreamedResponse(function () use ($tempPath) {
+                    $stream = fopen($tempPath, 'rb');
+                    if ($stream) {
+                        fpassthru($stream);
+                        fclose($stream);
+                    }
+                    @unlink($tempPath);
+                }, 200, [
+                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+                    'Cache-Control' => 'max-age=0, no-cache, must-revalidate',
+                    'Pragma' => 'public',
+                ]);
+            } catch (\Throwable $e) {
+                // If native generation fails, smoothly proceed to UTF-8 CSV fallback
+            }
+        }
+
+        // 2. High-compatibility UTF-8 CSV fallback with BOM (Opens perfectly in Excel)
+        $csvFilename = str_replace('.xlsx', '.csv', $filename);
+        return new StreamedResponse(function () use ($headers, $rows) {
+            $output = fopen('php://output', 'w');
+            // Write UTF-8 BOM so Microsoft Excel renders accented characters properly
+            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($output, $headers);
+            foreach ($rows as $row) {
+                fputcsv($output, $row);
+            }
+            fclose($output);
         }, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Cache-Control' => 'max-age=0',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$csvFilename}\"",
+            'Cache-Control' => 'max-age=0, no-cache, must-revalidate',
+            'Pragma' => 'public',
         ]);
+    }
+
+    /**
+     * Generate genuine OpenXML (.xlsx) package using PHP ZipArchive.
+     */
+    protected function createOpenXmlSpreadsheet(string $sheetTitle, array $headers, array $rows): string
+    {
+        $tempPath = tempnam(sys_get_temp_dir(), 'hrs_xlsx_') . '.xlsx';
+        $zip = new \ZipArchive();
+        if ($zip->open($tempPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Gagal membuat file spreadsheet sementara.');
+        }
+
+        // [Content_Types].xml
+        $contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            . '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            . '</Types>';
+        $zip->addFromString('[Content_Types].xml', $contentTypes);
+
+        // _rels/.rels
+        $rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            . '</Relationships>';
+        $zip->addFromString('_rels/.rels', $rootRels);
+
+        // xl/_rels/workbook.xml.rels
+        $wbRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            . '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            . '</Relationships>';
+        $zip->addFromString('xl/_rels/workbook.xml.rels', $wbRels);
+
+        // xl/workbook.xml
+        $safeTitle = htmlspecialchars(substr($sheetTitle, 0, 31), ENT_XML1, 'UTF-8');
+        $workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<sheets>'
+            . '<sheet name="' . $safeTitle . '" sheetId="1" r:id="rId1"/>'
+            . '</sheets>'
+            . '</workbook>';
+        $zip->addFromString('xl/workbook.xml', $workbookXml);
+
+        // xl/styles.xml (Professional Dark Navy Header + Clean Borders)
+        $stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . '<fonts count="2">'
+            . '<font><name val="Segoe UI"/><sz val="11"/></font>'
+            . '<font><name val="Segoe UI"/><sz val="11"/><b/><color rgb="FFFFFFFF"/></font>'
+            . '</fonts>'
+            . '<fills count="3">'
+            . '<fill><patternFill patternType="none"/></fill>'
+            . '<fill><patternFill patternType="gray125"/></fill>'
+            . '<fill><patternFill patternType="solid"><fgColor rgb="FF0F172A"/></patternFill></fill>'
+            . '</fills>'
+            . '<borders count="2">'
+            . '<border><left/><right/><top/><bottom/><diagonal/></border>'
+            . '<border>'
+            . '<left style="thin"><color rgb="FFCBD5E1"/></left>'
+            . '<right style="thin"><color rgb="FFCBD5E1"/></right>'
+            . '<top style="thin"><color rgb="FFCBD5E1"/></top>'
+            . '<bottom style="thin"><color rgb="FFCBD5E1"/></bottom>'
+            . '</border>'
+            . '</borders>'
+            . '<cellStyleXfs count="1">'
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>'
+            . '</cellStyleXfs>'
+            . '<cellXfs count="3">'
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>'
+            . '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+            . '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf>'
+            . '</cellXfs>'
+            . '</styleSheet>';
+        $zip->addFromString('xl/styles.xml', $stylesXml);
+
+        // xl/worksheets/sheet1.xml
+        $colWidths = [];
+        foreach ($headers as $cIdx => $h) {
+            $maxLen = mb_strlen((string)$h, 'UTF-8');
+            foreach ($rows as $r) {
+                $valLen = isset($r[$cIdx]) ? mb_strlen((string)$r[$cIdx], 'UTF-8') : 0;
+                if ($valLen > $maxLen) $maxLen = $valLen;
+            }
+            $colWidths[$cIdx + 1] = max(14, min(48, $maxLen + 4));
+        }
+
+        $colsXml = '<cols>';
+        foreach ($colWidths as $colNum => $width) {
+            $colsXml .= '<col min="' . $colNum . '" max="' . $colNum . '" width="' . $width . '" customWidth="1"/>';
+        }
+        $colsXml .= '</cols>';
+
+        $sheetDataXml = '<sheetData>';
+        // Header row (Dark navy fill, bold white text, height 28)
+        $sheetDataXml .= '<row r="1" ht="28" customHeight="1">';
+        foreach ($headers as $cIdx => $headerText) {
+            $cellRef = self::columnLetter($cIdx + 1) . '1';
+            $escaped = htmlspecialchars((string)$headerText, ENT_XML1, 'UTF-8');
+            $sheetDataXml .= '<c r="' . $cellRef . '" s="1" t="inlineStr"><is><t>' . $escaped . '</t></is></c>';
+        }
+        $sheetDataXml .= '</row>';
+
+        // Data rows (Height 22, border)
+        $rowNum = 2;
+        foreach ($rows as $row) {
+            $sheetDataXml .= '<row r="' . $rowNum . '" ht="22" customHeight="1">';
+            foreach ($row as $cIdx => $val) {
+                $cellRef = self::columnLetter($cIdx + 1) . $rowNum;
+                if (is_null($val) || $val === '') {
+                    $sheetDataXml .= '<c r="' . $cellRef . '" s="2"/>';
+                } elseif (is_int($val) || (is_numeric($val) && !preg_match('/^0[0-9]+$/', (string)$val))) {
+                    $sheetDataXml .= '<c r="' . $cellRef . '" s="2"><v>' . $val . '</v></c>';
+                } else {
+                    $escaped = htmlspecialchars((string)$val, ENT_XML1, 'UTF-8');
+                    $sheetDataXml .= '<c r="' . $cellRef . '" s="2" t="inlineStr"><is><t>' . $escaped . '</t></is></c>';
+                }
+            }
+            $sheetDataXml .= '</row>';
+            $rowNum++;
+        }
+        $sheetDataXml .= '</sheetData>';
+
+        $worksheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            . $colsXml
+            . $sheetDataXml
+            . '</worksheet>';
+        $zip->addFromString('xl/worksheets/sheet1.xml', $worksheetXml);
+
+        $zip->close();
+        return $tempPath;
     }
 
     /**
@@ -401,9 +519,7 @@ class ExcelDataService
      */
     public function import(string $module, UploadedFile $file): array
     {
-        $spreadsheet = IOFactory::load($file->getRealPath());
-        $sheet = $spreadsheet->getActiveSheet();
-        $rawRows = $sheet->toArray(null, true, true, false);
+        $rawRows = $this->parseUploadedSpreadsheet($file);
 
         if (count($rawRows) < 2) {
             return [
@@ -778,5 +894,144 @@ class ExcelDataService
         $promo->save();
 
         return $isNew ? 'created' : 'updated';
+    }
+
+    /**
+     * Unified spreadsheet parser supporting both Native OpenXML, CSV, and optional PhpSpreadsheet.
+     */
+    protected function parseUploadedSpreadsheet(UploadedFile $file): array
+    {
+        $realPath = $file->getRealPath();
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        // 1. Try PhpSpreadsheet if available
+        if (class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($realPath);
+                return $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
+            } catch (\Throwable $e) {
+                // Silently fall back to native parsers
+            }
+        }
+
+        // 2. CSV file handler
+        if ($extension === 'csv' || $extension === 'txt') {
+            return $this->parseCsv($realPath);
+        }
+
+        // 3. Native OpenXML (.xlsx) parser via standard PHP ZipArchive
+        if (class_exists(\ZipArchive::class)) {
+            $parsed = $this->parseNativeXlsx($realPath);
+            if (!empty($parsed)) {
+                return $parsed;
+            }
+        }
+
+        // 4. Fallback attempt via CSV
+        return $this->parseCsv($realPath);
+    }
+
+    /**
+     * Native parser for OpenXML (.xlsx) without external libraries.
+     */
+    protected function parseNativeXlsx(string $path): array
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($path) !== true) {
+            return [];
+        }
+
+        // Parse shared strings table (xl/sharedStrings.xml)
+        $sharedStrings = [];
+        $ssContent = $zip->getFromName('xl/sharedStrings.xml');
+        if ($ssContent !== false) {
+            $xml = @simplexml_load_string($ssContent);
+            if ($xml) {
+                foreach ($xml->si as $si) {
+                    if (isset($si->t)) {
+                        $sharedStrings[] = (string)$si->t;
+                    } elseif (isset($si->r)) {
+                        $text = '';
+                        foreach ($si->r as $r) {
+                            $text .= (string)$r->t;
+                        }
+                        $sharedStrings[] = $text;
+                    } else {
+                        $sharedStrings[] = '';
+                    }
+                }
+            }
+        }
+
+        // Parse worksheet 1 (xl/worksheets/sheet1.xml)
+        $parsedRows = [];
+        $sheetContent = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if ($sheetContent !== false) {
+            $xml = @simplexml_load_string($sheetContent);
+            if ($xml && isset($xml->sheetData->row)) {
+                foreach ($xml->sheetData->row as $row) {
+                    $rowCells = [];
+                    foreach ($row->c as $c) {
+                        $ref = (string)$c['r'];
+                        preg_match('/^([A-Z]+)(\d+)$/', $ref, $m);
+                        $colStr = $m[1] ?? 'A';
+                        $colIdx = 0;
+                        $len = strlen($colStr);
+                        for ($i = 0; $i < $len; $i++) {
+                            $colIdx = $colIdx * 26 + (ord($colStr[$i]) - 64);
+                        }
+                        $colIdx -= 1;
+
+                        $type = (string)$c['t'];
+                        $val = '';
+                        if ($type === 's') {
+                            $sId = (int)$c->v;
+                            $val = $sharedStrings[$sId] ?? '';
+                        } elseif ($type === 'inlineStr') {
+                            $val = (string)($c->is->t ?? '');
+                        } else {
+                            $val = (string)($c->v ?? '');
+                        }
+                        $rowCells[$colIdx] = $val;
+                    }
+
+                    if (!empty($rowCells)) {
+                        $max = max(array_keys($rowCells));
+                        $filled = [];
+                        for ($i = 0; $i <= $max; $i++) {
+                            $filled[] = $rowCells[$i] ?? '';
+                        }
+                        $parsedRows[] = $filled;
+                    }
+                }
+            }
+        }
+
+        $zip->close();
+        return $parsedRows;
+    }
+
+    /**
+     * Native CSV parser with auto-delimiter detection and UTF-8 BOM stripping.
+     */
+    protected function parseCsv(string $path): array
+    {
+        $rows = [];
+        if (($handle = fopen($path, 'r')) !== false) {
+            $firstLine = fgets($handle);
+            rewind($handle);
+
+            // Strip UTF-8 BOM if present
+            if (str_starts_with($firstLine, "\xEF\xBB\xBF")) {
+                fseek($handle, 3);
+            }
+
+            $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+            while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+                $rows[] = $data;
+            }
+            fclose($handle);
+        }
+        return $rows;
     }
 }
