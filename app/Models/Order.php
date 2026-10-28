@@ -114,4 +114,14 @@ class Order extends Model
     {
         return $this->belongsTo(User::class, 'voided_by');
     }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function table()
+    {
+        return $this->belongsTo(Table::class);
+    }
 }
