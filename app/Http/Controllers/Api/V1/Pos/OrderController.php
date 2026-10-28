@@ -429,7 +429,10 @@ class OrderController extends Controller
         if ($shiftId) {
             $query->where('shift_id', (int)$shiftId);
         } else {
-            $query->whereDate('client_created_at', '>=', now('Asia/Jakarta')->subDays(2)->toDateString());
+            $query->where(function ($q) {
+                $q->whereDate('client_created_at', '>=', now('Asia/Jakarta')->subDays(7)->toDateString())
+                  ->orWhereDate('created_at', '>=', now('Asia/Jakarta')->subDays(7)->toDateString());
+            });
         }
 
         $orders = $query->latest('id')->limit(50)->get();
