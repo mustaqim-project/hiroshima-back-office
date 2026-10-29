@@ -150,7 +150,7 @@ class HoldBillService
     {
         $query = Order::with(['items.modifiers', 'orderType', 'user', 'heldByUser'])
             ->where('branch_id', $branchId)
-            ->where('status', 'on_hold');
+            ->whereIn('status', ['on_hold', 'open']);
 
         if ($shiftId) {
             $query->where('shift_id', $shiftId);
@@ -172,7 +172,7 @@ class HoldBillService
                 throw new Exception("Transaksi Hold Bill tidak ditemukan.");
             }
 
-            if ($order->status !== 'on_hold') {
+            if (! in_array($order->status, ['on_hold', 'open'])) {
                 throw new Exception("Transaksi ini tidak dapat dilanjutkan karena statusnya bukan on_hold ({$order->status}). Kemungkinan sudah diproses oleh kasir lain.");
             }
 
@@ -213,8 +213,8 @@ class HoldBillService
                 throw new Exception("Transaksi Hold Bill tidak ditemukan.");
             }
 
-            if ($order->status !== 'on_hold') {
-                throw new Exception("Transaksi ini tidak dapat dibatalkan karena statusnya bukan on_hold ({$order->status}).");
+            if (! in_array($order->status, ['on_hold', 'open'])) {
+                throw new Exception("Transaksi ini tidak dapat dibatalkan karena statusnya ({$order->status}) bukan on_hold atau open.");
             }
 
             $order->update([
@@ -225,13 +225,67 @@ class HoldBillService
                 'is_unresolved_hold' => false,
             ]);
 
-            $this->auditLogger->record('order.hold_cancelled', $order, ['status' => 'on_hold'], [
+            $this->auditLogger->record('order.hold_cancelled', $order, ['status' => $order->status], [
                 'status' => 'voided',
                 'reason' => $reason,
                 'cancelled_by' => $user->id,
             ]);
 
             return $order;
+        });
+    }
+
+    /**
+     * Re-hold an open or resumed bill back into the hold list safely.
+     */
+    public function reHold(int $orderId, User $user, array $data = []): Order
+    {
+        return DB::transaction(function () use ($orderId, $user, $data) {
+            /** @var Order $order */
+            $order = Order::lockForUpdate()->find($orderId);
+
+            if (! $order) {
+                throw new Exception("Transaksi Open Bill tidak ditemukan.");
+            }
+
+            if (! in_array($order->status, ['on_hold', 'open'])) {
+                throw new Exception("Transaksi ini tidak dapat dikembalikan ke Open Bill karena statusnya {$order->status}.");
+            }
+
+            $updateData = [
+                'status' => 'on_hold',
+                'is_unresolved_hold' => false,
+                'held_at' => now('Asia/Jakarta'),
+            ];
+
+            if (isset($data['table_id'])) {
+                $updateData['table_id'] = $data['table_id'];
+            }
+            if (isset($data['hold_reference'])) {
+                $updateData['hold_reference'] = $data['hold_reference'];
+            }
+            if (isset($data['hold_notes'])) {
+                $updateData['hold_notes'] = $data['hold_notes'];
+            }
+            if (isset($data['manual_discount'])) {
+                $updateData['manual_discount_amount'] = (int) $data['manual_discount'];
+            }
+            if (isset($data['total_amount'])) {
+                $updateData['total_amount'] = (int) $data['total_amount'];
+            }
+            if (isset($data['subtotal'])) {
+                $updateData['subtotal'] = (int) $data['subtotal'];
+            }
+
+            $order->update($updateData);
+
+            $this->auditLogger->record('order.reheld', $order, ['status' => 'open'], [
+                'status' => 'on_hold',
+                'reheld_by' => $user->id,
+                'total_amount' => $order->total_amount,
+            ]);
+
+            return $order->load(['items.modifiers', 'orderType', 'user']);
         });
     }
 }

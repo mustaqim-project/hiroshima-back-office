@@ -246,8 +246,20 @@ class ShiftController extends Controller
         if ($requestedBranchId) {
             $shift = Shift::where('user_id', $user->id)
                 ->where('branch_id', $requestedBranchId)
+                ->where('status', 'open')
                 ->latest('id')
                 ->first();
+
+            if (! $shift) {
+                $shift = Shift::where('user_id', $user->id)
+                    ->where('branch_id', $requestedBranchId)
+                    ->latest('id')
+                    ->first();
+            }
+        }
+
+        if (! $shift) {
+            $shift = Shift::where('user_id', $user->id)->where('status', 'open')->latest('id')->first();
         }
 
         if (! $shift) {

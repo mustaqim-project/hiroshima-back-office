@@ -368,6 +368,26 @@ class OrderController extends Controller
         }
     }
 
+    public function reHold(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $order = $this->holdBillService->reHold($id, $user, $request->all());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil disimpan kembali ke daftar Open Bill.',
+                'order' => $order,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
     /**
      * Cancel a Hold Bill.
      */
