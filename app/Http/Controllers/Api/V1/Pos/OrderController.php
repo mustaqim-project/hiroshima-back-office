@@ -47,9 +47,17 @@ class OrderController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.product_variant_id' => 'nullable|exists:product_variants,id',
             'items.*.product_name' => 'required|string',
+            'items.*.variant_name' => 'nullable|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.subtotal' => 'nullable|integer|min:0',
+            'items.*.base_price' => 'nullable|integer|min:0',
+            'items.*.notes' => 'nullable|string',
             'items.*.modifiers' => 'nullable|array',
+            'items.*.modifiers.*.modifier_id' => 'nullable|integer',
+            'items.*.modifiers.*.modifier_name' => 'nullable|string',
+            'items.*.modifiers.*.unit_price' => 'nullable|integer',
+            'items.*.modifiers.*.quantity' => 'nullable|integer',
             'promo_discount' => 'nullable|integer|min:0',
             'voucher_discount' => 'nullable|integer|min:0',
             'loyalty_discount' => 'nullable|integer|min:0',
@@ -97,12 +105,15 @@ class OrderController extends Controller
         // Calculate subtotal
         $subtotal = 0;
         foreach ($validated['items'] as $item) {
-            $itemTotal = $item['unit_price'] * $item['quantity'];
+            $modTotal = 0;
             if (! empty($item['modifiers'])) {
                 foreach ($item['modifiers'] as $mod) {
-                    $itemTotal += ($mod['unit_price'] ?? 0) * ($mod['quantity'] ?? 1);
+                    $modTotal += ($mod['unit_price'] ?? 0) * ($mod['quantity'] ?? 1);
                 }
             }
+            $itemTotal = isset($item['subtotal']) && $item['subtotal'] > 0
+                ? (int) $item['subtotal']
+                : (($item['unit_price'] * $item['quantity']) + $modTotal);
             $subtotal += $itemTotal;
         }
 
@@ -169,13 +180,27 @@ class OrderController extends Controller
             ]);
 
             foreach ($validated['items'] as $itemData) {
-                $itemSubtotal = $itemData['unit_price'] * $itemData['quantity'];
+                $modTotal = 0;
+                if (! empty($itemData['modifiers'])) {
+                    foreach ($itemData['modifiers'] as $mod) {
+                        $modTotal += ($mod['unit_price'] ?? 0) * ($mod['quantity'] ?? 1);
+                    }
+                }
+                $itemSubtotal = isset($itemData['subtotal']) && $itemData['subtotal'] > 0
+                    ? (int) $itemData['subtotal']
+                    : (($itemData['unit_price'] * $itemData['quantity']) + $modTotal);
+
+                $variantName = $itemData['variant_name'] ?? null;
+                if (empty($variantName) && !empty($itemData['product_variant_id'])) {
+                    $variantName = \App\Models\ProductVariant::find($itemData['product_variant_id'])?->name;
+                }
+
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $itemData['product_id'],
                     'product_variant_id' => $itemData['product_variant_id'] ?? null,
                     'product_name' => $itemData['product_name'],
-                    'variant_name' => $itemData['variant_name'] ?? null,
+                    'variant_name' => $variantName,
                     'order_type_name_snapshot' => 'Dine In',
                     'quantity' => $itemData['quantity'],
                     'unit_price' => $itemData['unit_price'],
@@ -186,11 +211,17 @@ class OrderController extends Controller
 
                 if (! empty($itemData['modifiers'])) {
                     foreach ($itemData['modifiers'] as $mod) {
+                        $modId = $mod['modifier_id'] ?? $mod['id'] ?? null;
+                        $modName = $mod['modifier_name'] ?? $mod['name'] ?? null;
+                        if (empty($modName) && !empty($modId)) {
+                            $modName = \App\Models\Modifier::find($modId)?->name ?? 'Modifier';
+                        }
+
                         OrderItemModifier::create([
                             'order_item_id' => $orderItem->id,
-                            'modifier_id' => $mod['modifier_id'],
-                            'modifier_name' => $mod['modifier_name'],
-                            'unit_price' => $mod['unit_price'] ?? 0,
+                            'modifier_id' => $modId,
+                            'modifier_name' => $modName ?? 'Modifier',
+                            'unit_price' => $mod['unit_price'] ?? $mod['price'] ?? 0,
                             'quantity' => $mod['quantity'] ?? 1,
                         ]);
                     }
@@ -257,9 +288,17 @@ class OrderController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.product_variant_id' => 'nullable|exists:product_variants,id',
             'items.*.product_name' => 'required|string',
+            'items.*.variant_name' => 'nullable|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.subtotal' => 'nullable|integer|min:0',
+            'items.*.base_price' => 'nullable|integer|min:0',
+            'items.*.notes' => 'nullable|string',
             'items.*.modifiers' => 'nullable|array',
+            'items.*.modifiers.*.modifier_id' => 'nullable|integer',
+            'items.*.modifiers.*.modifier_name' => 'nullable|string',
+            'items.*.modifiers.*.unit_price' => 'nullable|integer',
+            'items.*.modifiers.*.quantity' => 'nullable|integer',
             'promo_discount' => 'nullable|integer|min:0',
             'voucher_discount' => 'nullable|integer|min:0',
             'loyalty_discount' => 'nullable|integer|min:0',

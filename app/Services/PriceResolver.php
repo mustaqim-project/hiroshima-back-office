@@ -98,6 +98,11 @@ class PriceResolver
             }
         }
 
+        // 6. Fallback to sellable base price if present on model
+        if (isset($sellable->price) && $sellable->price !== null) {
+            return (int) $sellable->price;
+        }
+
         return 0;
     }
 }

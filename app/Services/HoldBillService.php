@@ -47,12 +47,15 @@ class HoldBillService
 
         $subtotal = 0;
         foreach ($items as $item) {
-            $itemTotal = ($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1);
+            $modTotal = 0;
             if (! empty($item['modifiers'])) {
                 foreach ($item['modifiers'] as $mod) {
-                    $itemTotal += ($mod['unit_price'] ?? 0) * ($mod['quantity'] ?? 1);
+                    $modTotal += ($mod['unit_price'] ?? $mod['price'] ?? 0) * ($mod['quantity'] ?? 1);
                 }
             }
+            $itemTotal = isset($item['subtotal']) && $item['subtotal'] > 0
+                ? (int) $item['subtotal']
+                : (((($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1))) + $modTotal);
             $subtotal += $itemTotal;
         }
 
@@ -105,13 +108,27 @@ class HoldBillService
             ]);
 
             foreach ($items as $itemData) {
-                $itemSubtotal = ($itemData['unit_price'] ?? 0) * ($itemData['quantity'] ?? 1);
+                $modTotal = 0;
+                if (! empty($itemData['modifiers'])) {
+                    foreach ($itemData['modifiers'] as $mod) {
+                        $modTotal += ($mod['unit_price'] ?? $mod['price'] ?? 0) * ($mod['quantity'] ?? 1);
+                    }
+                }
+                $itemSubtotal = isset($itemData['subtotal']) && $itemData['subtotal'] > 0
+                    ? (int) $itemData['subtotal']
+                    : (((($itemData['unit_price'] ?? 0) * ($itemData['quantity'] ?? 1))) + $modTotal);
+
+                $variantName = $itemData['variant_name'] ?? null;
+                if (empty($variantName) && !empty($itemData['product_variant_id'])) {
+                    $variantName = \App\Models\ProductVariant::find($itemData['product_variant_id'])?->name;
+                }
+
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $itemData['product_id'],
                     'product_variant_id' => $itemData['product_variant_id'] ?? null,
                     'product_name' => $itemData['product_name'],
-                    'variant_name' => $itemData['variant_name'] ?? null,
+                    'variant_name' => $variantName,
                     'order_type_name_snapshot' => $itemData['order_type_name_snapshot'] ?? 'Default',
                     'quantity' => $itemData['quantity'] ?? 1,
                     'unit_price' => $itemData['unit_price'] ?? 0,
@@ -122,10 +139,16 @@ class HoldBillService
 
                 if (! empty($itemData['modifiers'])) {
                     foreach ($itemData['modifiers'] as $mod) {
+                        $modId = $mod['modifier_id'] ?? $mod['id'] ?? null;
+                        $modName = $mod['modifier_name'] ?? $mod['name'] ?? null;
+                        if (empty($modName) && !empty($modId)) {
+                            $modName = \App\Models\Modifier::find($modId)?->name ?? 'Modifier';
+                        }
+
                         OrderItemModifier::create([
                             'order_item_id' => $orderItem->id,
-                            'modifier_id' => $mod['modifier_id'] ?? $mod['id'],
-                            'modifier_name' => $mod['modifier_name'] ?? $mod['name'],
+                            'modifier_id' => $modId,
+                            'modifier_name' => $modName ?? 'Modifier',
                             'unit_price' => $mod['unit_price'] ?? $mod['price'] ?? 0,
                             'quantity' => $mod['quantity'] ?? 1,
                         ]);

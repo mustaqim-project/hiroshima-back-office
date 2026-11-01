@@ -165,12 +165,17 @@ class SyncEngine
 
                     // Items
                     foreach ($item['items'] as $itemData) {
+                        $variantName = $itemData['variant_name'] ?? null;
+                        if (empty($variantName) && !empty($itemData['product_variant_id'])) {
+                            $variantName = ProductVariant::find($itemData['product_variant_id'])?->name;
+                        }
+
                         $orderItem = OrderItem::create([
                             'order_id' => $order->id,
                             'product_id' => $itemData['product_id'],
                             'product_variant_id' => $itemData['product_variant_id'] ?? null,
                             'product_name' => $itemData['product_name'],
-                            'variant_name' => $itemData['variant_name'] ?? null,
+                            'variant_name' => $variantName,
                             'order_type_name_snapshot' => $itemData['order_type_name_snapshot'] ?? 'Default',
                             'quantity' => $itemData['quantity'],
                             'unit_price' => $itemData['unit_price'],
@@ -181,11 +186,17 @@ class SyncEngine
 
                         if (! empty($itemData['modifiers'])) {
                             foreach ($itemData['modifiers'] as $modData) {
+                                $modId = $modData['modifier_id'] ?? $modData['id'] ?? null;
+                                $modName = $modData['modifier_name'] ?? $modData['name'] ?? null;
+                                if (empty($modName) && !empty($modId)) {
+                                    $modName = Modifier::find($modId)?->name ?? 'Modifier';
+                                }
+
                                 OrderItemModifier::create([
                                     'order_item_id' => $orderItem->id,
-                                    'modifier_id' => $modData['modifier_id'],
-                                    'modifier_name' => $modData['modifier_name'],
-                                    'unit_price' => $modData['unit_price'] ?? 0,
+                                    'modifier_id' => $modId,
+                                    'modifier_name' => $modName ?? 'Modifier',
+                                    'unit_price' => $modData['unit_price'] ?? $modData['price'] ?? 0,
                                     'quantity' => $modData['quantity'] ?? 1,
                                 ]);
                             }

@@ -412,4 +412,147 @@ class ModifierAndVariantTest extends TestCase
         $this->assertEquals('Level 2 Mantap', $firstMod->modifier_name);
         $this->assertEquals(2000, $firstMod->unit_price);
     }
+
+    public function test_pos_order_store_and_hold_bill_with_variants_and_modifiers(): void
+    {
+        $group = ModifierGroup::create([
+            'name' => 'Topping Ramen Extra',
+            'selection_type' => 'single',
+            'min_select' => 1,
+            'max_select' => 1,
+            'is_required' => true,
+            'is_active' => true,
+        ]);
+
+        $mod = Modifier::create([
+            'modifier_group_id' => $group->id,
+            'name' => 'Ajitsuke Tamago (Telur)',
+            'price' => 5000,
+            'cost' => 2000,
+            'is_active' => true,
+        ]);
+
+        $product = Product::create([
+            'category_id' => $this->category->id,
+            'name' => 'Tori Paitan Ramen',
+            'sku' => 'TP-RMN-' . Str::random(4),
+            'manual_cost' => 15000,
+            'has_variants' => true,
+            'is_active' => true,
+        ]);
+
+        $variant = ProductVariant::create([
+            'product_id' => $product->id,
+            'name' => 'Porsi Reguler',
+            'sku' => $product->sku . '-REG',
+            'price' => 35000,
+            'manual_cost' => 15000,
+            'cost_method' => 'manual',
+            'is_active' => true,
+        ]);
+
+        $product->modifierGroups()->sync([$group->id]);
+
+        $shift = \App\Models\Shift::create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->adminUser->id,
+            'status' => 'open',
+            'opening_balance' => 100000,
+            'opened_at' => now(),
+        ]);
+
+        \Laravel\Sanctum\Sanctum::actingAs($this->adminUser);
+
+        // 1. Test POST /api/v1/orders with variant + modifier
+        // Item: 2x (35k variant + 5k modifier) = 80,000 subtotal
+        $orderPayload = [
+            'shift_id' => $shift->id,
+            'branch_id' => $this->branch->id,
+            'order_type_id' => $this->orderType->id,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'product_variant_id' => $variant->id,
+                    'product_name' => $product->name,
+                    'variant_name' => $variant->name,
+                    'quantity' => 2,
+                    'unit_price' => 35000,
+                    'subtotal' => 80000,
+                    'modifiers' => [
+                        [
+                            'modifier_id' => $mod->id,
+                            'modifier_name' => $mod->name,
+                            'unit_price' => 5000,
+                            'quantity' => 1,
+                        ],
+                    ],
+                ],
+            ],
+            'payments' => [
+                [
+                    'payment_method_id' => 1,
+                    'amount' => 88000,
+                ],
+            ],
+        ];
+
+        $resp = $this->postJson('/api/v1/orders', $orderPayload);
+        $resp->assertStatus(201);
+        $resp->assertJsonPath('success', true);
+        $resp->assertJsonPath('order.subtotal', 80000);
+
+        $savedOrder = Order::where('id', $resp->json('order.id'))->first();
+        $this->assertNotNull($savedOrder);
+        $this->assertEquals(80000, $savedOrder->subtotal);
+
+        $orderItem = $savedOrder->items()->first();
+        $this->assertEquals($variant->id, $orderItem->product_variant_id);
+        $this->assertEquals('Porsi Reguler', $orderItem->variant_name);
+        $this->assertEquals(80000, $orderItem->subtotal);
+        $this->assertEquals(1, $orderItem->modifiers()->count());
+
+        // 2. Test POST /api/v1/orders/hold with variant + modifier
+        \App\Models\Setting::set('hold_bill_enabled', '1', 'general');
+
+        $holdPayload = [
+            'shift_id' => $shift->id,
+            'branch_id' => $this->branch->id,
+            'order_type_id' => $this->orderType->id,
+            'hold_reference' => 'Meja VIP 1',
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'product_variant_id' => $variant->id,
+                    'product_name' => $product->name,
+                    'variant_name' => $variant->name,
+                    'quantity' => 1,
+                    'unit_price' => 35000,
+                    'subtotal' => 40000,
+                    'modifiers' => [
+                        [
+                            'modifier_id' => $mod->id,
+                            'modifier_name' => $mod->name,
+                            'unit_price' => 5000,
+                            'quantity' => 1,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $holdResp = $this->postJson('/api/v1/orders/hold', $holdPayload);
+        $holdResp->assertStatus(201);
+        $holdResp->assertJsonPath('success', true);
+        $holdResp->assertJsonPath('order.subtotal', 40000);
+
+        $heldOrderId = $holdResp->json('order.id');
+
+        // 3. Test Resume Hold Bill
+        $resumeResp = $this->postJson("/api/v1/orders/{$heldOrderId}/resume");
+        $resumeResp->assertStatus(200);
+        $resumeResp->assertJsonPath('success', true);
+        $resumeResp->assertJsonPath('order.status', 'open');
+        $resumeResp->assertJsonPath('order.items.0.variant_name', 'Porsi Reguler');
+        $resumeResp->assertJsonPath('order.items.0.modifiers.0.modifier_name', 'Ajitsuke Tamago (Telur)');
+    }
 }
