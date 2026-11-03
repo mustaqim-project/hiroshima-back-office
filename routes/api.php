@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AppUpdateController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\PinResetApiController;
 use App\Http\Controllers\Api\V1\Pos\AuthorizeController;
@@ -19,6 +20,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/device-activate', [AuthController::class, 'activateDevice'])->middleware('throttle:10,1');
     Route::post('/auth/forgot-pin', [PinResetApiController::class, 'requestOtp'])->middleware('throttle:10,1');
     Route::post('/auth/reset-pin', [PinResetApiController::class, 'verifyAndReset'])->middleware('throttle:10,1');
+    Route::get('/app/check-update', [AppUpdateController::class, 'checkUpdate'])->middleware('throttle:30,1');
 
     // Authenticated Internal POS API
     Route::middleware('auth:sanctum')->group(function () {

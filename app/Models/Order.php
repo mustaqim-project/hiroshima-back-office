@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesWibDates;
 use App\Traits\BelongsToBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Order extends Model
 {
-    use BelongsToBranch, HasFactory;
+    use BelongsToBranch, HasFactory, SerializesWibDates;
 
     protected $fillable = [
         'uuid',

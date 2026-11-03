@@ -22,8 +22,8 @@ trait BelongsToBranch
             /** @var User $user */
             $user = auth()->user();
 
-            // Owner and Central Admin have global multi-branch access or context branch access
-            if (in_array($user->role, ['owner', 'central_admin'])) {
+            // Owner, Superadmin and Central Admin have global multi-branch access or context branch access
+            if (in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])) {
                 if (session()->has('context_branch_id') && session('context_branch_id')) {
                     $builder->where($builder->getModel()->getTable() . '.branch_id', session('context_branch_id'));
                 }
@@ -40,7 +40,7 @@ trait BelongsToBranch
             if (! isset($model->branch_id) && auth()->check()) {
                 /** @var User $user */
                 $user = auth()->user();
-                if ($user->branch_id && ! in_array($user->role, ['owner', 'central_admin'])) {
+                if ($user->branch_id && ! in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])) {
                     $model->branch_id = $user->branch_id;
                 }
             }

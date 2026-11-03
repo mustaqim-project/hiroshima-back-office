@@ -109,13 +109,13 @@ class PosCrossBranchShiftTest extends TestCase
         $this->assertEquals($this->branchTebet->id, $openTebet->json('shift.branch_id'));
     }
 
-    public function test_expired_shift_older_than_23_hours_is_auto_closed_on_open_attempt(): void
+    public function test_expired_shift_older_than_15_hours_is_auto_closed_on_open_attempt(): void
     {
-        // 1. Create a stale shift opened 24 hours ago
+        // 1. Create a stale shift opened 16 hours ago
         $oldShift = Shift::create([
             'branch_id' => $this->branchTebet->id,
             'user_id' => $this->cashier->id,
-            'opened_at' => Carbon::now('Asia/Jakarta')->subHours(24),
+            'opened_at' => Carbon::now('Asia/Jakarta')->subHours(16),
             'starting_cash' => 100000,
             'status' => 'open',
         ]);
@@ -140,5 +140,109 @@ class PosCrossBranchShiftTest extends TestCase
 
         $resOpen->assertStatus(201);
         $this->assertEquals('open', $resOpen->json('shift.status'));
+    }
+
+    public function test_current_shift_report_does_not_leak_other_branch_shift_or_transactions(): void
+    {
+        // 1. Cashier opens shift at Cikini
+        $shiftCikini = Shift::create([
+            'branch_id' => $this->branchCikini->id,
+            'user_id' => $this->cashier->id,
+            'opened_at' => Carbon::now('Asia/Jakarta'),
+            'starting_cash' => 100000,
+            'status' => 'open',
+        ]);
+
+        // 2. Requesting current shift report for Tebet (where cashier has NO shift) returns 404, never Cikini's data
+        $reportTebet = $this->actingAs($this->cashier, 'sanctum')
+            ->withHeader('X-Branch-Id', (string)$this->branchTebet->id)
+            ->getJson('/api/v1/shifts/current/report');
+
+        $reportTebet->assertStatus(404);
+        $this->assertFalse($reportTebet->json('success'));
+        $this->assertStringContainsString('Data shift tidak ditemukan pada cabang ini', $reportTebet->json('message'));
+    }
+
+    public function test_superadmin_can_preview_branch_shift_and_history_across_accounts_in_same_branch(): void
+    {
+        // 1. Regular cashier opens shift at Tebet
+        $cashierTebet = User::factory()->create([
+            'name' => 'Kasir Tebet 1',
+            'email' => 'kasirtebet@hiroshima.co.id',
+            'role' => 'cashier',
+            'branch_id' => $this->branchTebet->id,
+        ]);
+
+        $shiftTebet = $this->shiftService->open($this->branchTebet->id, $cashierTebet->id, null, 150000);
+        $this->assertEquals('open', $shiftTebet->status);
+
+        $orderType = \App\Models\OrderType::firstOrCreate(
+            ['code' => 'dine_in'],
+            ['name' => 'Dine In', 'is_default' => true, 'is_active' => true]
+        );
+
+        // Record an order processed by the cashier under this shift
+        $order = \App\Models\Order::create([
+            'uuid' => (string)\Illuminate\Support\Str::uuid(),
+            'order_no' => 'HRS-TBT-POS-001',
+            'business_date' => Carbon::now('Asia/Jakarta')->toDateString(),
+            'branch_id' => $this->branchTebet->id,
+            'user_id' => $cashierTebet->id,
+            'shift_id' => $shiftTebet->id,
+            'order_type_id' => $orderType->id,
+            'subtotal' => 50000,
+            'tax_amount' => 5000,
+            'total_amount' => 55000,
+            'status' => 'completed',
+            'client_created_at' => Carbon::now('Asia/Jakarta'),
+        ]);
+
+        // 2. Superadmin / Owner logs in and views Tebet branch
+        $superadmin = User::factory()->create([
+            'name' => 'Superadmin Owner',
+            'email' => 'owner@hiroshima.co.id',
+            'role' => 'owner',
+            'branch_id' => null, // Multi-branch owner
+        ]);
+
+        // Superadmin checks current shift at Tebet -> returns the active branch shift (opened by cashier)
+        $resCurrent = $this->actingAs($superadmin, 'sanctum')
+            ->withHeader('X-Branch-Id', (string)$this->branchTebet->id)
+            ->getJson('/api/v1/shifts/current');
+
+        $resCurrent->assertStatus(200);
+        $this->assertTrue($resCurrent->json('has_active_shift'));
+        $this->assertEquals($shiftTebet->id, $resCurrent->json('shift.id'));
+        $this->assertEquals('Kasir Tebet 1', $resCurrent->json('shift.cashier_name'));
+
+        // Superadmin previews current shift report -> sees cashier's transactions
+        $resReport = $this->actingAs($superadmin, 'sanctum')
+            ->withHeader('X-Branch-Id', (string)$this->branchTebet->id)
+            ->getJson('/api/v1/shifts/current/report');
+
+        $resReport->assertStatus(200);
+        $this->assertTrue($resReport->json('success'));
+        $this->assertEquals($shiftTebet->id, $resReport->json('report.shift_info.shift_id'));
+        $this->assertEquals(1, $resReport->json('report.transaction_summary.completed_transaction_count'));
+        $this->assertEquals(50000, $resReport->json('report.transaction_summary.gross_sales'));
+
+        // Superadmin checks recent orders history for Tebet branch -> sees the cashier's order
+        $resRecent = $this->actingAs($superadmin, 'sanctum')
+            ->withHeader('X-Branch-Id', (string)$this->branchTebet->id)
+            ->getJson('/api/v1/orders/recent');
+
+        $resRecent->assertStatus(200);
+        $this->assertTrue($resRecent->json('success'));
+        $this->assertCount(1, $resRecent->json('orders'));
+        $this->assertEquals('HRS-TBT-POS-001', $resRecent->json('orders.0.order_no'));
+
+        // Attempting to open another duplicate shift at Tebet while shift is already running is rejected
+        $resDuplicateOpen = $this->actingAs($superadmin, 'sanctum')
+            ->withHeader('X-Branch-Id', (string)$this->branchTebet->id)
+            ->postJson('/api/v1/shifts/open', [
+                'starting_cash' => 200000,
+            ]);
+        $resDuplicateOpen->assertStatus(409);
+        $this->assertStringContainsString('sudah memiliki shift aktif', $resDuplicateOpen->json('message'));
     }
 }

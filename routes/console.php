@@ -12,7 +12,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Scheduler Hostinger Single Cron
+// Scheduler Hostinger Single Cron (Explicit WIB / Asia/Jakarta UTC+7)
+Schedule::timezone('Asia/Jakarta');
 Schedule::command('shifts:auto-close')->everyFiveMinutes();
 Schedule::command('fraud:scan')->everyFifteenMinutes();
 Schedule::command('audit:verify')->dailyAt('02:00');

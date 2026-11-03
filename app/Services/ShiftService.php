@@ -33,13 +33,38 @@ class ShiftService
      */
     public function open(int $branchId, int $userId, ?int $deviceId, int $startingCash): Shift
     {
-        // 1. Auto-close any expired shifts across the system (>23h)
+        // 1. Auto-close any expired shifts across the system (>15h)
         $this->autoCloseExpiredShifts();
 
-        // 2. Check if cashier already has an active shift
+        // 2. Check if branch already has an active shift (shifts are per branch)
+        $existingBranchShift = Shift::with(['branch', 'user'])
+            ->where('branch_id', $branchId)
+            ->where('status', 'open')
+            ->latest('id')
+            ->first();
+
+        if ($existingBranchShift) {
+            try {
+                $this->assertOpenAndFresh($existingBranchShift);
+            } catch (Exception $e) {
+                $existingBranchShift = Shift::with(['branch', 'user'])
+                    ->where('branch_id', $branchId)
+                    ->where('status', 'open')
+                    ->latest('id')
+                    ->first();
+            }
+        }
+
+        if ($existingBranchShift) {
+            $branchName = $existingBranchShift->branch?->name ? "Cabang {$existingBranchShift->branch->name}" : "Cabang #{$branchId}";
+            $cashierName = $existingBranchShift->user?->name ?? "Kasir";
+            throw new Exception("{$branchName} sudah memiliki shift aktif yang sedang berjalan (Shift #{$existingBranchShift->id} oleh {$cashierName}). Shift berlaku per cabang, silakan lanjutkan transaksi.");
+        }
+
+        // 3. Check if cashier already has an active shift on another branch (cross branch)
         $existingUserShift = Shift::with('branch')->where('user_id', $userId)->where('status', 'open')->first();
         if ($existingUserShift) {
-            // Check if this shift has exceeded 23 hours
+            // Check if this shift has exceeded 15 hours
             try {
                 $this->assertOpenAndFresh($existingUserShift);
             } catch (Exception $e) {
@@ -50,7 +75,7 @@ class ShiftService
 
         if ($existingUserShift) {
             $branchName = $existingUserShift->branch?->name ? " (Cabang {$existingUserShift->branch->name})" : "";
-            throw new Exception("Kasir masih memiliki shift aktif yang belum ditutup (Shift #{$existingUserShift->id}{$branchName}). Harap tutup shift sebelumnya.");
+            throw new Exception("Kasir masih memiliki shift aktif yang belum ditutup pada cabang lain (Shift #{$existingUserShift->id}{$branchName}). Harap tutup shift sebelumnya.");
         }
 
         if ($deviceId) {
@@ -106,7 +131,7 @@ class ShiftService
      * Close a shift manually by cashier with physical cash count.
      * Validates that no Hold Bills or uncompleted checkouts remain open.
      */
-    public function close(Shift $shift, int $actualCash, string $closeType = 'manual', ?string $reason = null, bool $cancelUnfinalized = false): Shift
+    public function close(Shift $shift, int $actualCash, string $closeType = 'manual', ?string $reason = null, bool $cancelUnfinalized = false, ?int $closedByUserId = null): Shift
     {
         // 1. Validate: No open Hold Bills on this shift
         $openHoldBills = Order::where('shift_id', $shift->id)
@@ -149,6 +174,7 @@ class ShiftService
 
         $expectedCash = $this->calculateExpectedCash($shift);
         $difference = $actualCash - $expectedCash;
+        $closedBy = $closedByUserId ?? auth()->id() ?? $shift->user_id;
 
         $shift->update([
             'closed_at' => now('Asia/Jakarta'),
@@ -158,13 +184,14 @@ class ShiftService
             'status' => 'closed',
             'close_type' => $closeType,
             'close_reason' => $reason ?? 'Penutupan shift reguler oleh kasir.',
+            'closed_by' => $closedBy,
         ]);
 
         return $shift;
     }
 
     /**
-     * Assert that shift is open and within 23-hour lifespan; auto-close if expired.
+     * Assert that shift is open and within 15-hour lifespan; auto-close if expired.
      */
     public function assertOpenAndFresh(Shift $shift, ?CarbonInterface $now = null): void
     {
@@ -175,8 +202,8 @@ class ShiftService
             throw new Exception("Shift #{$shift->id} tidak berstatus aktif ({$shift->status}).");
         }
 
-        if ($openedAt->diffInHours($now) >= 23) {
-            $closedAt = $openedAt->copy()->addHours(23);
+        if ($openedAt->diffInHours($now) >= 15) {
+            $closedAt = $openedAt->copy()->addHours(15);
             $expectedCash = $this->calculateExpectedCash($shift);
 
             // Auto close expired shift
@@ -187,7 +214,7 @@ class ShiftService
                 'cash_difference' => null,
                 'status' => 'auto_closed',
                 'close_type' => 'auto',
-                'close_reason' => 'Shift ditutup otomatis oleh sistem karena telah mencapai batas waktu operasional 23 jam.',
+                'close_reason' => 'Shift ditutup otomatis oleh sistem karena telah mencapai batas waktu operasional 15 jam.',
             ]);
 
             // Flag any open hold bills in this shift as unresolved
@@ -195,17 +222,17 @@ class ShiftService
                 ->where('status', 'on_hold')
                 ->update(['is_unresolved_hold' => true]);
 
-            throw new Exception("Shift #{$shift->id} telah ditutup otomatis karena melebihi batas waktu 23 jam. Silakan buka shift baru.");
+            throw new Exception("Shift #{$shift->id} telah ditutup otomatis karena melebihi batas waktu 15 jam. Silakan buka shift baru.");
         }
     }
 
     /**
-     * Scan and auto-close all shifts older than 23 hours (called by scheduler every 5 minutes).
+     * Scan and auto-close all shifts older than 15 hours (called by scheduler every 5 minutes).
      */
     public function autoCloseExpiredShifts(?CarbonInterface $now = null): int
     {
         $now = $now ?? now('Asia/Jakarta');
-        $cutoff = $now->copy()->subHours(23);
+        $cutoff = $now->copy()->subHours(15);
 
         $expiredShifts = Shift::where('status', 'open')
             ->where('opened_at', '<=', $cutoff)
@@ -214,7 +241,7 @@ class ShiftService
         $count = 0;
         foreach ($expiredShifts as $shift) {
             $openedAt = Carbon::parse($shift->opened_at);
-            $closedAt = $openedAt->copy()->addHours(23);
+            $closedAt = $openedAt->copy()->addHours(15);
             $expectedCash = $this->calculateExpectedCash($shift);
 
             $shift->update([
@@ -224,7 +251,7 @@ class ShiftService
                 'cash_difference' => null,
                 'status' => 'auto_closed',
                 'close_type' => 'auto',
-                'close_reason' => 'Shift ditutup otomatis oleh scheduler karena melebihi batas waktu operasional 23 jam.',
+                'close_reason' => 'Shift ditutup otomatis oleh scheduler karena melebihi batas waktu operasional 15 jam.',
             ]);
 
             // Flag open hold bills as unresolved hold items
@@ -340,14 +367,39 @@ class ShiftService
         // 3. Shift Information
         $branch = $shift->branch;
         $user = $shift->user;
+        $closer = $shift->closer;
+
+        $openedByName = $user?->name ?? 'Kasir Hiroshima';
+        $openedByUsername = $user?->username ?? 'kasir';
+
+        if ($shift->status === 'open') {
+            $closedByName = 'Shift Masih Berjalan';
+            $closedByUsername = null;
+        } elseif ($shift->status === 'auto_closed' || $shift->close_type === 'auto') {
+            $closedByName = 'Sistem (Otomatis 15 Jam)';
+            $closedByUsername = 'system';
+        } else {
+            $closedByName = $closer?->name ?? $user?->name ?? 'Kasir Hiroshima';
+            $closedByUsername = $closer?->username ?? $user?->username ?? 'kasir';
+        }
 
         return [
+            'branch_id' => $shift->branch_id,
+            'opened_by_name' => $openedByName,
+            'closed_by_name' => $closedByName,
             'shift_info' => [
                 'company_name' => Setting::getCompanyName(),
+                'branch_id' => $shift->branch_id,
                 'branch_name' => $branch?->name ?? 'Hiroshima Japanese Street Food',
                 'branch_code' => $branch?->code ?? 'HRS01',
-                'cashier_name' => $user?->name ?? 'Kasir Hiroshima',
-                'cashier_username' => $user?->username ?? 'kasir',
+                'cashier_name' => $openedByName,
+                'cashier_username' => $openedByUsername,
+                'opened_by_id' => $shift->user_id,
+                'opened_by_name' => $openedByName,
+                'opened_by_username' => $openedByUsername,
+                'closed_by_id' => $shift->closed_by,
+                'closed_by_name' => $closedByName,
+                'closed_by_username' => $closedByUsername,
                 'shift_id' => $shift->id,
                 'opened_at' => $shift->opened_at ? $shift->opened_at->toIso8601String() : null,
                 'closed_at' => $shift->closed_at ? $shift->closed_at->toIso8601String() : null,

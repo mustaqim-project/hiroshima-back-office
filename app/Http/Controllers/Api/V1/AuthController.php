@@ -91,7 +91,7 @@ class AuthController extends Controller
 
         // Determine multi-branch access (FR-AUTH-04)
         $canSwitchBranch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $accessibleBranches = $canSwitchBranch
@@ -192,7 +192,7 @@ class AuthController extends Controller
     {
         $user = $request->user()->load('branch');
         $canSwitchBranch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $accessibleBranches = $canSwitchBranch
@@ -211,7 +211,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $canSwitchBranch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $branches = $canSwitchBranch

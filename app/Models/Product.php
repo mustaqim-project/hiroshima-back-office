@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesWibDates;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Product extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SerializesWibDates, SoftDeletes;
 
     protected $fillable = [
         'category_id',

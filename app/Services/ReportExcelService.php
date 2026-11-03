@@ -1023,7 +1023,7 @@ class ReportExcelService
             $sumAct += $actCash;
             $sumDiff += $diff;
 
-            $closeMethod = $s->close_type === 'auto' ? 'Auto-Close 23 Jam' : ($s->closed_at ? 'Manual Kasir' : 'Masih Berjalan');
+            $closeMethod = $s->close_type === 'auto' ? 'Auto-Close 15 Jam' : ($s->closed_at ? 'Manual Kasir' : 'Masih Berjalan');
 
             $rows[] = [
                 $idx + 1,

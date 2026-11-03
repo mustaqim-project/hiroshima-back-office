@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Laporan Close Shift #' . $shift->id])
+@extends('layouts.app', ['title' => ($report['shift_info']['status'] === 'open' ? 'Realtime X-Report #' : 'Laporan Close Shift #') . $shift->id])
 
 @section('content')
 <style>
@@ -91,12 +91,12 @@
 <div class="no-print" style="max-width: 820px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
         <a href="{{ route('reconciliation.index') }}" class="btn btn-outline btn-sm">
-            <x-icon name="arrow-left" size="14" /> Kembali ke Rekonsiliasi
+            <x-icon name="arrow-left" size="14" /> Kembali ke Rekonsiliasi & Monitoring
         </a>
     </div>
     <div style="display: flex; gap: 10px;">
         <button type="button" class="btn btn-primary" onclick="window.print()">
-            <x-icon name="printer" size="16" /> Cetak Laporan Close Shift
+            <x-icon name="printer" size="16" /> {{ $report['shift_info']['status'] === 'open' ? 'Cetak Preview Shift (X-Report)' : 'Cetak Laporan Close Shift (Z-Report)' }}
         </button>
     </div>
 </div>
@@ -107,22 +107,42 @@
         <h1 style="font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px;">{{ $report['shift_info']['company_name'] }}</h1>
         <div style="font-size: 14px; font-weight: 600; color: var(--text-main);">{{ $report['shift_info']['branch_name'] }} ({{ $report['shift_info']['branch_code'] }})</div>
         <div style="font-size: 16px; font-weight: 800; color: var(--primary); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
-            LAPORAN PENUTUPAN SHIFT (CLOSE SHIFT REPORT)
+            @if($report['shift_info']['status'] === 'open')
+                RINGKASAN TRANSAKSI SHIFT REALTIME (X-REPORT)
+            @else
+                LAPORAN PENUTUPAN SHIFT (CLOSE SHIFT / Z-REPORT)
+            @endif
         </div>
         <div style="margin-top: 6px;">
-            <span class="{{ $report['shift_info']['close_type'] === 'auto' ? 'badge-auto' : 'badge-manual' }}">
-                Penutupan: {{ strtoupper($report['shift_info']['close_type']) }}
-            </span>
+            @if($report['shift_info']['status'] === 'open')
+                <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+                    STATUS: SEDANG BERJALAN (REALTIME LIVE MONITORING)
+                </span>
+            @else
+                <span class="{{ $report['shift_info']['close_type'] === 'auto' ? 'badge-auto' : 'badge-manual' }}">
+                    Penutupan: {{ strtoupper($report['shift_info']['close_type']) }}
+                </span>
+            @endif
         </div>
     </div>
 
     <!-- Informasi Detail Shift (Section C) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 13px; background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 24px;">
         <div><strong>ID Shift:</strong> #{{ $report['shift_info']['shift_id'] }}</div>
-        <div><strong>Kasir:</strong> {{ $report['shift_info']['cashier_name'] }} ({{ $report['shift_info']['cashier_username'] }})</div>
-        <div><strong>Waktu Buka:</strong> {{ \Carbon\Carbon::parse($report['shift_info']['opened_at'])->format('d/m/Y H:i:s') }}</div>
-        <div><strong>Waktu Tutup:</strong> {{ $report['shift_info']['closed_at'] ? \Carbon\Carbon::parse($report['shift_info']['closed_at'])->format('d/m/Y H:i:s') : '-' }}</div>
-        <div><strong>Waktu Cetak:</strong> {{ \Carbon\Carbon::parse($report['shift_info']['printed_at'])->format('d/m/Y H:i:s') }} WIB</div>
+        <div><strong>Buka Shift Oleh:</strong> {{ $report['shift_info']['opened_by_name'] ?? $report['shift_info']['cashier_name'] }}</div>
+        <div><strong>Waktu Buka:</strong> {{ \Carbon\Carbon::parse($report['shift_info']['opened_at'])->format('d/m/Y H:i:s') }} WIB</div>
+        <div>
+            <strong>Tutup Shift Oleh:</strong> 
+            @if($report['shift_info']['status'] === 'open')
+                <span style="color: #2563eb; font-weight: 600;">Shift Masih Berjalan</span>
+            @elseif($report['shift_info']['status'] === 'auto_closed' || $report['shift_info']['close_type'] === 'auto')
+                <span style="color: #dc2626; font-weight: 600;">Sistem (Auto 15h)</span>
+            @else
+                {{ $report['shift_info']['closed_by_name'] ?? $report['shift_info']['cashier_name'] }}
+            @endif
+        </div>
+        <div><strong>Waktu Tutup:</strong> {{ $report['shift_info']['closed_at'] ? \Carbon\Carbon::parse($report['shift_info']['closed_at'])->format('d/m/Y H:i:s') . ' WIB' : '-' }}</div>
+        <div><strong>Waktu Cetak/Preview:</strong> {{ \Carbon\Carbon::parse($report['shift_info']['printed_at'])->format('d/m/Y H:i:s') }} WIB</div>
         <div><strong>Status Shift:</strong> {{ strtoupper($report['shift_info']['status']) }}</div>
     </div>
 
@@ -245,14 +265,21 @@
             </div>
             <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px;">
                 <span>Kas yang Seharusnya Tersedia (Expected):</span>
-                <strong>Rp {{ number_format($report['transaction_summary']['cash_reconciliation']['expected_cash'], 0, ',', '.') }}</strong>
+                <strong>
+                    Rp {{ number_format($report['transaction_summary']['cash_reconciliation']['expected_cash'], 0, ',', '.') }}
+                    @if($report['shift_info']['status'] === 'open')
+                        <span style="color: #2563eb; font-size: 11px;">(Live Sementara)</span>
+                    @endif
+                </strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px;">
                 <span>Kas Fisik Dihitung Kasir (Actual):</span>
                 @if($report['transaction_summary']['cash_reconciliation']['actual_cash'] !== null)
                     <strong>Rp {{ number_format($report['transaction_summary']['cash_reconciliation']['actual_cash'], 0, ',', '.') }}</strong>
+                @elseif($report['shift_info']['status'] === 'open')
+                    <span style="color: #2563eb; font-weight: 600;">Shift Masih Berjalan (Belum Tutup)</span>
                 @else
-                    <span style="color: var(--text-muted);">- (Auto-Close)</span>
+                    <span style="color: var(--text-muted);">- (Auto-Close 15h)</span>
                 @endif
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0 2px; font-size: 14px;">
@@ -262,6 +289,8 @@
                     <strong style="color: {{ $diff < 0 ? 'var(--danger)' : ($diff > 0 ? 'var(--warning)' : 'var(--success)') }};">
                         {{ $diff < 0 ? '-' : '+' }} Rp {{ number_format(abs($diff), 0, ',', '.') }}
                     </strong>
+                @elseif($report['shift_info']['status'] === 'open')
+                    <span style="color: var(--text-muted); font-size: 12px;">Dihitung saat Kasir Tutup Shift</span>
                 @else
                     <span style="color: var(--text-muted);">-</span>
                 @endif
@@ -272,15 +301,15 @@
     <!-- Tanda Tangan / Verifikasi Fisik -->
     <div style="margin-top: 36px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center; font-size: 13px;">
         <div>
-            <div style="margin-bottom: 50px;">Kasir yang Bertugas,</div>
+            <div style="margin-bottom: 50px;">{{ $report['shift_info']['status'] === 'open' ? 'Kasir Buka Shift,' : 'Kasir Bertugas,' }}</div>
             <div style="font-weight: 700; border-top: 1px solid #94a3b8; display: inline-block; padding-top: 4px; min-width: 160px;">
-                {{ $report['shift_info']['cashier_name'] }}
+                {{ $report['shift_info']['status'] === 'open' ? ($report['shift_info']['opened_by_name'] ?? $report['shift_info']['cashier_name']) : ($report['shift_info']['closed_by_name'] ?? $report['shift_info']['cashier_name']) }}
             </div>
         </div>
         <div>
             <div style="margin-bottom: 50px;">Disetujui / Diverifikasi,</div>
             <div style="font-weight: 700; border-top: 1px solid #94a3b8; display: inline-block; padding-top: 4px; min-width: 160px;">
-                Kepala Cabang / Supervisor
+                Kepala Cabang / Supervisor / Owner
             </div>
         </div>
     </div>

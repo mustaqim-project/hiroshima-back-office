@@ -22,7 +22,7 @@ class SyncController extends Controller
     {
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
@@ -58,7 +58,7 @@ class SyncController extends Controller
 
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $firstItemBranchId = $request->input('items.0.branch_id');

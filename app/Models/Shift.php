@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesWibDates;
 use App\Traits\BelongsToBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Shift extends Model
 {
-    use BelongsToBranch, HasFactory;
+    use BelongsToBranch, HasFactory, SerializesWibDates;
 
     protected $fillable = [
         'branch_id',
@@ -26,6 +27,7 @@ class Shift extends Model
         'status',
         'close_type',
         'close_reason',
+        'closed_by',
         'reconciled_by',
         'reconciled_at',
         'reconciliation_notes',
@@ -44,6 +46,21 @@ class Shift extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function opener()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function closer()
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    public function reconciler()
+    {
+        return $this->belongsTo(User::class, 'reconciled_by');
     }
 
     public function device()

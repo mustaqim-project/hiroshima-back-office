@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesWibDates;
 use App\Traits\BelongsToBranch;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CashBook extends Model
 {
-    use BelongsToBranch, HasFactory, SoftDeletes;
+    use BelongsToBranch, HasFactory, SerializesWibDates, SoftDeletes;
 
     protected $fillable = [
         'branch_id',

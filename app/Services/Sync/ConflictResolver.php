@@ -44,13 +44,13 @@ class ConflictResolver
         }
 
         $shiftOpenedAt = Carbon::parse($shift->opened_at);
-        $shiftDeadline = $shiftOpenedAt->copy()->addHours(23);
+        $shiftDeadline = $shiftOpenedAt->copy()->addHours(15);
 
         if ($clientCreatedAt->greaterThan($shiftDeadline)) {
             return [
                 'status' => 'rejected',
                 'flags' => ['shift_expired_before_transaction'],
-                'reason' => 'Transaksi ditolak karena dibuat setelah batas waktu shift 23 jam terlampaui.',
+                'reason' => 'Transaksi ditolak karena dibuat setelah batas waktu shift 15 jam terlampaui.',
             ];
         }
 

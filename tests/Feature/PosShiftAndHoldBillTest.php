@@ -187,17 +187,17 @@ class PosShiftAndHoldBillTest extends TestCase
     }
 
     /**
-     * Skenario 3: Transaksi ditolak setelah 23 jam, meskipun scheduler terlambat.
+     * Skenario 3: Transaksi ditolak setelah 15 jam, meskipun scheduler terlambat.
      */
-    public function test_03_transaction_rejected_after_23_hours_even_if_scheduler_delayed(): void
+    public function test_03_transaction_rejected_after_15_hours_even_if_scheduler_delayed(): void
     {
         Sanctum::actingAs($this->cashier);
 
-        // Shift opened 23 hours and 5 minutes ago, but scheduler has NOT run (status is still 'open' in DB)
+        // Shift opened 15 hours and 5 minutes ago, but scheduler has NOT run (status is still 'open' in DB)
         $shift = Shift::create([
             'branch_id' => $this->branch->id,
             'user_id' => $this->cashier->id,
-            'opened_at' => now('Asia/Jakarta')->subHours(23)->subMinutes(5),
+            'opened_at' => now('Asia/Jakarta')->subHours(15)->subMinutes(5),
             'starting_cash' => 200000,
             'status' => 'open',
         ]);
@@ -217,7 +217,7 @@ class PosShiftAndHoldBillTest extends TestCase
 
         $response->assertStatus(403);
         $this->assertFalse($response->json('success'));
-        $this->assertStringContainsString('23 jam', $response->json('message'));
+        $this->assertStringContainsString('15 jam', $response->json('message'));
 
         // Backend must have automatically marked the shift as auto_closed
         $shift->refresh();
@@ -230,11 +230,11 @@ class PosShiftAndHoldBillTest extends TestCase
      */
     public function test_04_auto_close_updates_shift_status_and_records_reason(): void
     {
-        // Shift opened 24 hours ago
+        // Shift opened 16 hours ago
         $shift = Shift::create([
             'branch_id' => $this->branch->id,
             'user_id' => $this->cashier->id,
-            'opened_at' => now('Asia/Jakarta')->subHours(24),
+            'opened_at' => now('Asia/Jakarta')->subHours(16),
             'starting_cash' => 150000,
             'status' => 'open',
         ]);
@@ -246,7 +246,7 @@ class PosShiftAndHoldBillTest extends TestCase
         $this->assertEquals('auto_closed', $shift->status);
         $this->assertEquals('auto', $shift->close_type);
         $this->assertNotNull($shift->close_reason);
-        $this->assertStringContainsString('23 jam', $shift->close_reason);
+        $this->assertStringContainsString('15 jam', $shift->close_reason);
         $this->assertNotNull($shift->closed_at);
     }
 

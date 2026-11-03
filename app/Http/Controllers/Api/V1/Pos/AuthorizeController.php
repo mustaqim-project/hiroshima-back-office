@@ -28,7 +28,7 @@ class AuthorizeController extends Controller
 
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->input('branch_id');

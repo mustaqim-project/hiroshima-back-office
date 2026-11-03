@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Enforce application timezone Asia/Jakarta (WIB UTC+7) across all PHP date/time operations
+        date_default_timezone_set(config('app.timezone', 'Asia/Jakarta'));
+        \Carbon\Carbon::setLocale('id');
+
         \Illuminate\Pagination\Paginator::defaultView('vendor.pagination.default');
         \Illuminate\Pagination\Paginator::defaultSimpleView('vendor.pagination.simple-default');
 

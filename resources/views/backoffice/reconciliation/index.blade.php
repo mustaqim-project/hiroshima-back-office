@@ -1,52 +1,208 @@
-@extends('layouts.app', ['title' => 'Rekonsiliasi Shift Kasir'])
+@extends('layouts.app', ['title' => 'Rekonsiliasi Shift Kasir & Realtime Monitoring'])
 
 @section('content')
-<div style="margin-bottom: 24px;">
-    <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Rekonsiliasi Shift Kasir</h2>
-    <p style="color: var(--text-muted); font-size: 14px;">Tinjau selisih kas fisik vs kas diharapkan, shift yang ditutup manual maupun auto-close 23 jam.</p>
+<div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px;">Rekonsiliasi Shift Kasir & Realtime Monitoring</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Pantau transaksi realtime dari buka hingga tutup shift, verifikasi kasir yang buka dan tutup shift, serta audit selisih kas fisik.</p>
+    </div>
+    
+    <!-- Refresh Button -->
+    <a href="{{ route('reconciliation.index', request()->query()) }}" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+        <x-icon name="refresh-cw" size="14" />
+        <span>Segarkan Data Realtime</span>
+    </a>
 </div>
 
+<!-- Banner Monitoring Shift Aktif Realtime -->
+@if(isset($activeShifts) && $activeShifts->isNotEmpty())
+    <div style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); animation: pulseDot 2s infinite;"></span>
+            <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; margin: 0;">
+                Shift Sedang Berjalan (Realtime Live Active Shifts)
+            </h3>
+            <span class="badge" style="background: #dcfce7; color: #166534; font-weight: 700; font-size: 11px;">
+                {{ $activeShifts->count() }} Outlet Aktif
+            </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;">
+            @foreach($activeShifts as $ashift)
+                <div style="background: #ffffff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #10b981);"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-size: 15px; font-weight: 800; color: #0f172a;">{{ $ashift->branch->name ?? 'Cabang #' . $ashift->branch_id }}</div>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">
+                                Shift ID: <strong>#{{ $ashift->id }}</strong> &bull; Buka: <strong>{{ $ashift->opened_at->format('d/m/Y H:i') }} WIB</strong>
+                            </div>
+                        </div>
+                        <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb; display: inline-block;"></span>
+                            LIVE
+                        </span>
+                    </div>
+
+                    <!-- Detail Kasir Buka & Status Tutup -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span style="color: #64748b;">Kasir Buka Shift:</span>
+                            <strong style="color: #0f172a;">{{ $ashift->user->name ?? 'Kasir' }} ({{ $ashift->user->username ?? '-' }})</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #64748b;">Status Penutupan:</span>
+                            <span style="color: #2563eb; font-weight: 600;">Sedang Berjalan (Belum Tutup)</span>
+                        </div>
+                    </div>
+
+                    <!-- Metrik Transaksi Realtime -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Transaksi Selesai</div>
+                            <div style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 2px;">
+                                {{ $ashift->live_completed_tx }} Tx
+                            </div>
+                        </div>
+                        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Penjualan Bersih Live</div>
+                            <div style="font-size: 15px; font-weight: 800; color: #10b981; margin-top: 2px;">
+                                Rp {{ number_format($ashift->live_sales, 0, ',', '.') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+                        <div>
+                            <div style="font-size: 11px; color: #64748b;">Ekspektasi Kas Laci Saat Ini</div>
+                            <div style="font-size: 14px; font-weight: 800; color: #0f172a;">
+                                Rp {{ number_format($ashift->live_expected_cash, 0, ',', '.') }}
+                            </div>
+                        </div>
+                        <a href="{{ route('reconciliation.report', $ashift) }}" target="_blank" class="btn btn-sm" style="background: #2563eb; color: #ffffff; font-weight: 600; font-size: 12px; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; text-decoration: none;">
+                            <x-icon name="eye" size="13" />
+                            <span>Pantau Realtime (X-Report)</span>
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
+<!-- Filter Bar -->
+<div class="card" style="margin-bottom: 16px; padding: 14px 18px;">
+    <form method="GET" action="{{ route('reconciliation.index') }}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="branch_id" style="font-size: 13px; font-weight: 600; color: #475569; white-space: nowrap;">Cabang:</label>
+            <select name="branch_id" id="branch_id" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff;">
+                <option value="">Semua Cabang (All)</option>
+                @foreach($branches as $b)
+                    <option value="{{ $b->id }}" {{ (string)$selectedBranchId === (string)$b->id ? 'selected' : '' }}>
+                        {{ $b->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="status" style="font-size: 13px; font-weight: 600; color: #475569; white-space: nowrap;">Status Shift:</label>
+            <select name="status" id="status" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff;">
+                <option value="all" {{ $selectedStatus === 'all' ? 'selected' : '' }}>Semua Shift (Termasuk Sedang Berjalan)</option>
+                <option value="open" {{ $selectedStatus === 'open' ? 'selected' : '' }}>🟢 Sedang Berjalan (Realtime)</option>
+                <option value="closed" {{ $selectedStatus === 'closed' ? 'selected' : '' }}>Menunggu Rekonsiliasi Kasir</option>
+                <option value="auto_closed" {{ $selectedStatus === 'auto_closed' ? 'selected' : '' }}>Auto-Close 15 Jam</option>
+                <option value="reconciled" {{ $selectedStatus === 'reconciled' ? 'selected' : '' }}>Direkonsiliasi</option>
+            </select>
+        </div>
+
+        @if($selectedBranchId || ($selectedStatus && $selectedStatus !== 'all'))
+            <a href="{{ route('reconciliation.index') }}" class="btn btn-outline btn-sm" style="font-size: 12px; padding: 6px 10px;">
+                Reset Filter
+            </a>
+        @endif
+    </form>
+</div>
+
+<!-- Tabel Riwayat & Rekonsiliasi Shift -->
 <div class="card">
     <div class="table-responsive">
         <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 80px;">ID Shift</th>
+                <th style="width: 70px;">ID Shift</th>
                 <th>Cabang</th>
-                <th>Kasir</th>
-                <th style="white-space: nowrap;">Waktu Buka</th>
-                <th style="white-space: nowrap;">Waktu Tutup</th>
+                <th>Buka Shift Oleh</th>
+                <th>Tutup Shift Oleh</th>
                 <th style="text-align: right; white-space: nowrap;">Modal Awal</th>
                 <th style="text-align: right; white-space: nowrap;">Kas Diharapkan</th>
-                <th style="text-align: right; white-space: nowrap;">Kas Fisik</th>
+                <th style="text-align: right; white-space: nowrap;">Kas Fisik Kasir</th>
                 <th style="text-align: right; white-space: nowrap;">Selisih Kas</th>
-                <th style="text-align: center; width: 140px;">Status</th>
+                <th style="text-align: center; width: 150px;">Status Shift</th>
                 <th style="text-align: center; min-width: 190px;">Aksi</th>
             </tr>
         </thead>
         <tbody>
             @forelse($shifts as $s)
-                <tr>
+                <tr style="{{ $s->status === 'open' ? 'background: #f0fdf4;' : '' }}">
                     <td><strong>#{{ $s->id }}</strong></td>
-                    <td>{{ $s->branch->name ?? '-' }}</td>
-                    <td>{{ $s->user->name ?? '-' }}</td>
-                    <td style="white-space: nowrap; font-size: 12.5px;">{{ $s->opened_at->format('d/m H:i') }}</td>
-                    <td style="white-space: nowrap; font-size: 12.5px;">{{ $s->closed_at ? $s->closed_at->format('d/m H:i') : '-' }}</td>
+                    <td>
+                        <div style="font-weight: 600;">{{ $s->branch->name ?? '-' }}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">{{ $s->branch->code ?? '' }}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #0f172a;">{{ $s->user->name ?? '-' }}</div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">
+                            {{ $s->opened_at->format('d/m/Y H:i') }} WIB
+                        </div>
+                    </td>
+                    <td>
+                        @if($s->status === 'open')
+                            <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 600;">
+                                Sedang Berjalan
+                            </span>
+                        @elseif($s->status === 'auto_closed' || $s->close_type === 'auto')
+                            <span class="badge badge-danger" style="font-size: 11px;" title="Ditutup otomatis oleh sistem setelah 15 jam">
+                                Sistem (Auto 15h)
+                            </span>
+                            @if($s->closed_at)
+                                <div style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap; margin-top: 2px;">
+                                    {{ $s->closed_at->format('d/m/Y H:i') }}
+                                </div>
+                            @endif
+                        @else
+                            <div style="font-weight: 600; color: #0f172a;">
+                                {{ $s->closer->name ?? $s->user->name ?? '-' }}
+                            </div>
+                            @if($s->closed_at)
+                                <div style="font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">
+                                    {{ $s->closed_at->format('d/m/Y H:i') }} WIB
+                                </div>
+                            @endif
+                        @endif
+                    </td>
                     <td style="text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;">
                         Rp {{ number_format($s->starting_cash, 0, ',', '.') }}
                     </td>
                     <td style="text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;">
-                        Rp {{ number_format($s->expected_cash ?? 0, 0, ',', '.') }}
-                    </td>
-                    <td style="text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;">
-                        @if($s->actual_cash !== null)
-                            Rp {{ number_format($s->actual_cash, 0, ',', '.') }}
-                        @else
-                            <span style="color: var(--text-muted);">-</span>
+                        <strong>Rp {{ number_format($s->expected_cash ?? 0, 0, ',', '.') }}</strong>
+                        @if($s->status === 'open')
+                            <div style="font-size: 10.5px; color: #16a34a; font-weight: 600;">(Live Realtime)</div>
                         @endif
                     </td>
                     <td style="text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;">
-                        @if($s->cash_difference !== null)
+                        @if($s->status === 'open')
+                            <span style="color: #64748b; font-size: 12px; font-style: italic;">Belum Tutup</span>
+                        @elseif($s->actual_cash !== null)
+                            Rp {{ number_format($s->actual_cash, 0, ',', '.') }}
+                        @else
+                            <span style="color: var(--text-muted); font-size: 12px;">- (Auto)</span>
+                        @endif
+                    </td>
+                    <td style="text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap;">
+                        @if($s->status === 'open')
+                            <span style="color: #64748b; font-size: 12px; font-style: italic;">Menunggu Tutup</span>
+                        @elseif($s->cash_difference !== null)
                             <strong style="color: {{ $s->cash_difference < 0 ? 'var(--danger)' : ($s->cash_difference > 0 ? 'var(--warning)' : 'var(--success)') }};">
                                 {{ $s->cash_difference < 0 ? '-' : ($s->cash_difference > 0 ? '+' : '') }} Rp {{ number_format(abs($s->cash_difference), 0, ',', '.') }}
                             </strong>
@@ -55,10 +211,15 @@
                         @endif
                     </td>
                     <td style="text-align: center;">
-                        @if($s->status === 'reconciled')
+                        @if($s->status === 'open')
+                            <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                <span style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb; display: inline-block;"></span>
+                                Sedang Berjalan
+                            </span>
+                        @elseif($s->status === 'reconciled')
                             <span class="badge badge-success">Direkonsiliasi</span>
                         @elseif($s->status === 'auto_closed')
-                            <span class="badge badge-danger">Auto-Close 23h</span>
+                            <span class="badge badge-danger">Auto-Close 15h</span>
                         @elseif($s->status === 'closed')
                             <span class="badge badge-warning">Menunggu Rekonsiliasi</span>
                         @else
@@ -67,16 +228,20 @@
                     </td>
                     <td style="text-align: center; white-space: nowrap;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-                            <a href="{{ Route::has('reconciliation.report') ? route('reconciliation.report', $s) : url('/backoffice/reconciliation/' . $s->id . '/report') }}" 
+                            <a href="{{ route('reconciliation.report', $s) }}" 
                                class="btn btn-outline btn-sm" 
                                target="_blank" 
-                               title="Cetak / Lihat Laporan Close Shift"
+                               title="{{ $s->status === 'open' ? 'Pantau Transaksi Realtime (X-Report)' : 'Cetak / Lihat Laporan Close Shift' }}"
                                style="padding: 5px 10px; font-size: 12px; height: 30px; min-height: 30px; border-color: #cbd5e1; display: inline-flex; align-items: center; gap: 5px;">
-                                <x-icon name="printer" size="13" />
-                                <span>Laporan</span>
+                                <x-icon name="{{ $s->status === 'open' ? 'eye' : 'printer' }}" size="13" />
+                                <span>{{ $s->status === 'open' ? 'Pantau Live' : 'Laporan' }}</span>
                             </a>
 
-                            @if($s->status !== 'reconciled')
+                            @if($s->status === 'open')
+                                <span style="font-size: 11px; color: #2563eb; font-weight: 600; padding: 5px 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;" title="Shift sedang berlangsung. Tombol rekonsiliasi kas fisik akan aktif setelah shift ditutup oleh kasir.">
+                                    Shift Aktif
+                                </span>
+                            @elseif($s->status !== 'reconciled')
                                 <button type="button" 
                                         class="btn btn-sm btn-reconcile-action" 
                                         onclick="openReconcileModal({{ $s->id }}, '{{ addslashes($s->branch->name ?? '-') }}', '{{ addslashes($s->user->name ?? '-') }}', 'Rp {{ number_format($s->starting_cash, 0, ',', '.') }}', 'Rp {{ number_format($s->expected_cash ?? 0, 0, ',', '.') }}', '{{ $s->actual_cash !== null ? 'Rp ' . number_format($s->actual_cash, 0, ',', '.') : '-' }}', '{{ $s->cash_difference !== null ? ($s->cash_difference < 0 ? '-' : ($s->cash_difference > 0 ? '+' : '')) . ' Rp ' . number_format(abs($s->cash_difference), 0, ',', '.') : '-' }}', {{ $s->cash_difference ?? 0 }})"
@@ -103,8 +268,8 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 36px;">
-                        Belum ada shift yang memerlukan rekonsiliasi.
+                    <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 36px;">
+                        Belum ada shift yang tercatat sesuai kriteria filter.
                     </td>
                 </tr>
             @endforelse
@@ -193,6 +358,11 @@
     @keyframes modalFadeIn {
         from { opacity: 0; transform: scale(0.96) translateY(-8px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes pulseDot {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
     }
     .quick-chip {
         background: #f1f5f9;

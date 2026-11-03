@@ -3,7 +3,7 @@
 @section('content')
 <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
     <div>
-        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Audit Log Tamper-Evident (FSD-18)</h2>
+        <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em;">Audit Log Tamper-Evident</h2>
         <p style="color: var(--text-muted); font-size: 14px;">Seluruh mutasi data sensitif diikat dalam rantai kriptografis SHA-256 (hash chain) anti-manipulasi.</p>
     </div>
 

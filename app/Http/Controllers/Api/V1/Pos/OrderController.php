@@ -69,7 +69,7 @@ class OrderController extends Controller
 
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $shift = Shift::find($validated['shift_id']);
@@ -92,7 +92,7 @@ class OrderController extends Controller
             ], 403);
         }
 
-        // Assert shift is active and <= 23 hours
+        // Assert shift is active and <= 15 hours
         try {
             $this->shiftService->assertOpenAndFresh($shift);
         } catch (Exception $e) {
@@ -149,7 +149,7 @@ class OrderController extends Controller
 
         $uuid = $validated['uuid'] ?? (string) Str::uuid();
         $dateStr = now('Asia/Jakarta')->format('Ymd');
-        $seq = Order::where('branch_id', $branch->id)->whereDate('created_at', today())->count() + 1;
+        $seq = Order::where('branch_id', $branch->id)->whereDate('created_at', today('Asia/Jakarta'))->count() + 1;
         $orderNo = sprintf('%s-POS-%s-%04d', $branch->code, $dateStr, $seq);
 
         $order = DB::transaction(function () use ($validated, $branch, $shift, $user, $calc, $uuid, $orderNo, $requiresPin) {
@@ -308,7 +308,7 @@ class OrderController extends Controller
 
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $shift = Shift::find($validated['shift_id']);
@@ -328,6 +328,13 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Hold Bill ditolak. Kasir wajib memiliki shift aktif.',
+            ], 403);
+        }
+
+        if ($shift && (int)$shift->branch_id !== (int)$branch->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hold Bill ditolak. Shift aktif kasir berada di cabang yang berbeda.',
             ], 403);
         }
 
@@ -354,7 +361,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
@@ -382,7 +389,18 @@ class OrderController extends Controller
     public function resume(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $activeShift = Shift::where('user_id', $user->id)->where('status', 'open')->latest('id')->first();
+        $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');
+        $activeShift = null;
+
+        if ($requestedBranchId) {
+            $activeShift = Shift::where('branch_id', (int)$requestedBranchId)->where('status', 'open')->latest('id')->first();
+        }
+        if (! $activeShift && $user->branch_id) {
+            $activeShift = Shift::where('branch_id', (int)$user->branch_id)->where('status', 'open')->latest('id')->first();
+        }
+        if (! $activeShift) {
+            $activeShift = Shift::where('user_id', $user->id)->where('status', 'open')->latest('id')->first();
+        }
 
         if (! $activeShift) {
             return response()->json([
@@ -461,7 +479,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         $canSwitch = is_null($user->branch_id)
-            || in_array($user->role, ['owner', 'central_admin'])
+            || in_array($user->role, ['owner', 'central_admin', 'superadmin', 'admin'])
             || $user->can('branch.manage');
 
         $requestedBranchId = $request->header('X-Branch-Id') ?? $request->query('branch_id');

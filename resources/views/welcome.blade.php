@@ -671,7 +671,7 @@
                     Hiroshima Cloud POS & Manajemen Shift
                 </h3>
                 <p style="font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; max-width: 620px;">
-                    Didukung fitur lengkap: manajemen shift kasir 23 jam otomatis, penahanan transaksi (Hold Bill), multi-harga per jenis pesanan, rekonsiliasi kas, dan cetak struk Bluetooth Thermal dua rangkap (Pelanggan & Dapur).
+                    Didukung fitur lengkap: manajemen shift kasir 15 jam otomatis, penahanan transaksi (Hold Bill), multi-harga per jenis pesanan, rekonsiliasi kas, dan cetak struk Bluetooth Thermal dua rangkap (Pelanggan & Dapur).
                 </p>
 
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">

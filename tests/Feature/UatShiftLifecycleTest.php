@@ -113,15 +113,15 @@ class UatShiftLifecycleTest extends TestCase
     }
 
     /**
-     * UAT-02: Shift Auto-Close tepat pada batas 23 jam dan penolakan transaksi baru.
+     * UAT-02: Shift Auto-Close tepat pada batas 15 jam dan penolakan transaksi baru.
      */
-    public function test_uat_02_shift_auto_close_after_twenty_three_hours(): void
+    public function test_uat_02_shift_auto_close_after_fifteen_hours(): void
     {
-        // Opened 24 hours ago
+        // Opened 16 hours ago
         $shift = Shift::create([
             'branch_id' => $this->branch->id,
             'user_id' => $this->cashier->id,
-            'opened_at' => now('Asia/Jakarta')->subHours(24),
+            'opened_at' => now('Asia/Jakarta')->subHours(16),
             'starting_cash' => 100000,
             'status' => 'open',
         ]);

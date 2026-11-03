@@ -70,7 +70,7 @@ class HoldBillService
 
         $uuid = $data['uuid'] ?? (string) Str::uuid();
         $dateStr = now('Asia/Jakarta')->format('Ymd');
-        $seq = Order::where('branch_id', $branch->id)->whereDate('created_at', today())->count() + 1;
+        $seq = Order::where('branch_id', $branch->id)->whereDate('created_at', today('Asia/Jakarta'))->count() + 1;
         $orderNo = sprintf('%s-HOLD-%s-%04d', $branch->code, $dateStr, $seq);
 
         return DB::transaction(function () use ($user, $branch, $shift, $data, $items, $calc, $uuid, $orderNo) {
@@ -202,6 +202,9 @@ class HoldBillService
             // If active shift is provided, verify it is open and update order shift if previous shift ended
             if ($activeShift) {
                 $this->shiftService->assertOpenAndFresh($activeShift);
+                if ($order->branch_id && (int)$activeShift->branch_id !== (int)$order->branch_id) {
+                    throw new Exception("Shift aktif kasir berada di cabang yang berbeda dengan pesanan ini.");
+                }
                 $order->shift_id = $activeShift->id;
             }
 

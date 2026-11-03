@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesWibDates;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
@@ -10,6 +11,8 @@ use RuntimeException;
  */
 class AuditLog extends Model
 {
+    use SerializesWibDates;
+
     public $timestamps = false;
 
     protected $fillable = [
