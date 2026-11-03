@@ -105,26 +105,58 @@ class ShiftService
 
     /**
      * Calculate expected cash for a shift:
-     * modal_awal + tunai - refund_tunai + kas_masuk - kas_keluar
+     * modal_awal + penerimaan_tunai - pengeluaran_refund_tunai + kas_masuk - kas_keluar
+     *
+     * Catatan Akuntansi Kas Laci:
+     * 1. Pembayaran Non-Tunai (QRIS, Kartu Debit, Transfer) memiliki `is_cash: false`.
+     *    Uang digital langsung masuk rekening bank/settlement, TIDAK MASUK kas laci fisik kasir.
+     *    Sehingga transaksi QRIS dan void QRIS TIDAK BOLEH mempengaruhi ekspektasi kas laci (tetap Rp 0).
+     * 2. Pembayaran Tunai (Cash) memiliki `is_cash: true`.
+     *    Ketika transaksi tunai selesai, uang masuk ke laci kasir ($cashReceived).
+     *    Ketika transaksi tunai di-void, uang tunai dikembalikan ke pelanggan dari laci ($cashRefunds).
+     *    Oleh karena itu, penerimaan tunai dihitung dari seluruh pembayaran tunai yang diterima pada shift ini
+     *    dikurangi seluruh refund tunai yang dikeluarkan dari laci pada shift ini.
+     *    (Menghindari double-deduction bug di mana transaksi void dikeluarkan dari completed sales
+     *    DAN dikurangi lagi di refunds).
      */
     public function calculateExpectedCash(Shift $shift): int
     {
-        // 1. Total cash payments received
-        $cashPayments = Payment::where('shift_id', $shift->id)
-            ->whereHas('order', fn ($q) => $q->where('status', 'completed'))
-            ->whereHas('paymentMethod', fn ($q) => $q->where('is_cash', true))
+        // 1. Total seluruh pembayaran tunai fisik yang diterima ke laci pada shift ini
+        $cashReceived = Payment::where('shift_id', $shift->id)
+            ->where(function ($query) {
+                $query->whereHas('paymentMethod', fn ($q) => $q->where('is_cash', true))
+                    ->orWhere(function ($q) {
+                        $q->whereNull('payment_method_id')
+                            ->where(function ($sub) {
+                                $sub->where('payment_method_name_snapshot', 'like', '%tunai%')
+                                    ->orWhere('payment_method_name_snapshot', 'like', '%cash%');
+                            });
+                    });
+            })
             ->sum('amount');
 
-        // 2. Cash refunds
+        // 2. Total uang tunai fisik yang dikeluarkan dari laci sebagai refund pelanggan pada shift ini
         $cashRefunds = Refund::where('shift_id', $shift->id)
-            ->whereHas('payment.paymentMethod', fn ($q) => $q->where('is_cash', true))
+            ->where(function ($query) {
+                $query->whereHas('payment.paymentMethod', fn ($q) => $q->where('is_cash', true))
+                    ->orWhereHas('payment', function ($pq) {
+                        $pq->whereNull('payment_method_id')
+                            ->where(function ($sub) {
+                                $sub->where('payment_method_name_snapshot', 'like', '%tunai%')
+                                    ->orWhere('payment_method_name_snapshot', 'like', '%cash%');
+                            });
+                    });
+            })
             ->sum('amount');
 
-        // 3. Cash in & Cash out
+        // 3. Penyesuaian Kas Masuk & Kas Keluar operasional (Petty Cash)
         $cashIn = CashMovement::where('shift_id', $shift->id)->where('type', 'cash_in')->sum('amount');
         $cashOut = CashMovement::where('shift_id', $shift->id)->where('type', 'cash_out')->sum('amount');
 
-        return (int) ($shift->starting_cash + $cashPayments - $cashRefunds + $cashIn - $cashOut);
+        $expected = (int) ($shift->starting_cash + $cashReceived - $cashRefunds + $cashIn - $cashOut);
+
+        // Fisik uang di laci tidak boleh negatif
+        return max(0, $expected);
     }
 
     /**
@@ -360,7 +392,7 @@ class ShiftService
 
         // Cash Reconciliation
         $startingCash = (int) $shift->starting_cash;
-        $expectedCash = $shift->expected_cash !== null ? (int) $shift->expected_cash : $this->calculateExpectedCash($shift);
+        $expectedCash = $shift->expected_cash !== null ? max(0, (int) $shift->expected_cash) : $this->calculateExpectedCash($shift);
         $actualCash = $shift->actual_cash !== null ? (int) $shift->actual_cash : null;
         $cashDifference = $shift->cash_difference !== null ? (int) $shift->cash_difference : null;
 

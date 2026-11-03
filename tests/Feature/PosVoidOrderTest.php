@@ -248,4 +248,130 @@ class PosVoidOrderTest extends TestCase
                 'orders',
             ]);
     }
+
+    public function test_void_qris_order_does_not_affect_cash_drawer_expected_cash(): void
+    {
+        Sanctum::actingAs($this->cashier);
+
+        $qrisMethod = PaymentMethod::firstOrCreate(
+            ['code' => 'qris_static'],
+            ['name' => 'QRIS', 'type' => 'qris_static', 'is_cash' => false, 'is_active' => true]
+        );
+
+        // Kasir mulai dengan modal awal Rp 0 (seperti kasus user)
+        $zeroShift = Shift::create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->cashier->id,
+            'opened_at' => now('Asia/Jakarta'),
+            'starting_cash' => 0,
+            'status' => 'open',
+        ]);
+
+        $order = Order::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'order_no' => 'HRS-QRIS-001',
+            'branch_id' => $this->branch->id,
+            'shift_id' => $zeroShift->id,
+            'user_id' => $this->cashier->id,
+            'order_type_id' => $this->orderType->id,
+            'status' => 'completed',
+            'business_date' => now('Asia/Jakarta')->toDateString(),
+            'subtotal' => 274000,
+            'total_amount' => 274000,
+            'paid_amount' => 274000,
+            'client_created_at' => now('Asia/Jakarta'),
+        ]);
+
+        Payment::create([
+            'order_id' => $order->id,
+            'shift_id' => $zeroShift->id,
+            'payment_method_id' => $qrisMethod->id,
+            'payment_method_name_snapshot' => 'QRIS',
+            'amount' => 274000,
+            'paid_at' => now('Asia/Jakarta'),
+        ]);
+
+        $shiftService = app(ShiftService::class);
+        $this->assertEquals(0, $shiftService->calculateExpectedCash($zeroShift));
+
+        // Void QRIS order
+        $response = $this->postJson("/api/v1/orders/{$order->id}/void", [
+            'pin_void' => '123456',
+            'reason' => 'testing by agung',
+        ]);
+        $response->assertOk();
+
+        // Ekspektasi kas laci harus TETAP 0 (tidak boleh minus dan tidak boleh error 1264)
+        $this->assertEquals(0, $shiftService->calculateExpectedCash($zeroShift));
+
+        // Tutup shift harus sukses tanpa error SQL numeric out of range
+        $closed = $shiftService->close($zeroShift, 0, 'manual', 'Tutup shift normal');
+        $this->assertEquals('closed', $closed->status);
+        $this->assertEquals(0, $closed->expected_cash);
+        $this->assertEquals(0, $closed->cash_difference);
+    }
+
+    public function test_void_cash_order_resets_expected_cash_without_double_deduction(): void
+    {
+        Sanctum::actingAs($this->cashier);
+
+        $cashMethod = PaymentMethod::firstOrCreate(
+            ['code' => 'cash'],
+            ['name' => 'Tunai (Cash)', 'type' => 'cash', 'is_cash' => true, 'is_active' => true]
+        );
+        $cashMethod->update(['is_cash' => true]);
+
+        // Kasir mulai dengan modal Rp 0
+        $shift = Shift::create([
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->cashier->id,
+            'opened_at' => now('Asia/Jakarta'),
+            'starting_cash' => 0,
+            'status' => 'open',
+        ]);
+
+        $order = Order::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'order_no' => 'HRS-CASH-001',
+            'branch_id' => $this->branch->id,
+            'shift_id' => $shift->id,
+            'user_id' => $this->cashier->id,
+            'order_type_id' => $this->orderType->id,
+            'status' => 'completed',
+            'business_date' => now('Asia/Jakarta')->toDateString(),
+            'subtotal' => 274000,
+            'total_amount' => 274000,
+            'paid_amount' => 274000,
+            'client_created_at' => now('Asia/Jakarta'),
+        ]);
+
+        Payment::create([
+            'order_id' => $order->id,
+            'shift_id' => $shift->id,
+            'payment_method_id' => $cashMethod->id,
+            'payment_method_name_snapshot' => 'Tunai (Cash)',
+            'amount' => 274000,
+            'paid_at' => now('Asia/Jakarta'),
+        ]);
+
+        $shiftService = app(ShiftService::class);
+        // Saat selesai transaksi tunai: ekspektasi kas laci = 274.000
+        $this->assertEquals(274000, $shiftService->calculateExpectedCash($shift));
+
+        // Void transaksi tunai
+        $response = $this->postJson("/api/v1/orders/{$order->id}/void", [
+            'pin_void' => '123456',
+            'reason' => 'tes transaksi by agung',
+        ]);
+        $response->assertOk();
+
+        // Saat di-void: uang fisik dikembalikan ke pelanggan, kas laci kembali ke 0 (BUKAN -274.000)
+        $this->assertEquals(0, $shiftService->calculateExpectedCash($shift));
+
+        // Tutup shift harus sukses dengan expected_cash = 0
+        $closed = $shiftService->close($shift, 0, 'manual', 'Tutup shift normal');
+        $this->assertEquals('closed', $closed->status);
+        $this->assertEquals(0, $closed->expected_cash);
+        $this->assertEquals(0, $closed->cash_difference);
+    }
 }
