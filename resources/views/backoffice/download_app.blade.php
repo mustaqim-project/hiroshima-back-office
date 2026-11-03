@@ -5,7 +5,7 @@
     <div>
         <div style="display: flex; align-items: center; gap: 10px;">
             <h2 style="font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: #0f172a;">Aplikasi Mobile Hiroshima POS</h2>
-            <span class="badge badge-success" style="font-size: 11px; padding: 4px 10px; border-radius: 20px;">Android v1.0.2</span>
+            <span class="badge badge-success" style="font-size: 11px; padding: 4px 10px; border-radius: 20px;">Android v1.0.5</span>
         </div>
         <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">
             Unduh installer APK resmi Hiroshima untuk perangkat tablet kasir dan smartphone operasional cabang.
