@@ -14,12 +14,12 @@ class AppUpdateController extends Controller
         $currentBuild = (int) $request->query('build_number', 0);
         $currentVersion = $request->query('version_name', '1.0.0');
 
-        $latestVersion = '1.0.2';
-        $latestBuild = 3;
-        $downloadUrl = url('/downloads/pos-release.apk');
-        $changelog = "- In-App OTA Update tanpa install ulang\n- Isolasi ketat data transaksi, shift, dan hold bills antar-cabang\n- Pencegahan kebocoran data di mode offline & online\n- Peningkatan stabilitas dan kompatibilitas tema iOS Apple HIG";
+        $latestVersion = '1.0.6';
+        $latestBuild = 7;
+        $downloadUrl = url('/downloads/Hiroshima.apk');
+        $changelog = "- Fitur input Nama Customer pada Open Bill (wajib)\n- Cetak Nama Customer pada Tiket Dapur Bluetooth Thermal\n- Input otomatis Nama Customer saat transaksi langsung Bayar (Quick Serve)\n- Cetak Nama Customer pada Struk Pelanggan & Bill Bayar Lunas\n- Indikator nama customer pada sidebar keranjang kasir";
         $isMandatory = false;
-        $releaseDate = '2026-11-03';
+        $releaseDate = '2026-11-04';
 
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('app_settings')) {
