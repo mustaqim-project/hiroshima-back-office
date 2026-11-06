@@ -36,27 +36,23 @@ class ConflictResolver
 
         $shift = Shift::find($payload['shift_id']);
         if (! $shift) {
-            return [
-                'status' => 'rejected',
-                'flags' => ['invalid_shift'],
-                'reason' => 'Transaksi ditolak karena data shift tidak ditemukan di sistem.',
-            ];
-        }
-
-        $shiftOpenedAt = Carbon::parse($shift->opened_at);
-        $shiftDeadline = $shiftOpenedAt->copy()->addHours(15);
-
-        if ($clientCreatedAt->greaterThan($shiftDeadline)) {
-            return [
-                'status' => 'rejected',
-                'flags' => ['shift_expired_before_transaction'],
-                'reason' => 'Transaksi ditolak karena dibuat setelah batas waktu shift 15 jam terlampaui.',
-            ];
-        }
-
-        if (in_array($shift->status, ['closed', 'auto_closed'])) {
-            $flags[] = 'shift_already_closed_on_server';
+            // If shift_id was provided by client (e.g. offline cashier session),
+            // accept as flagged to guarantee zero revenue loss.
+            $flags[] = 'invalid_shift_flagged';
             $status = 'accepted_flagged';
+        } else {
+            $shiftOpenedAt = Carbon::parse($shift->opened_at);
+            $shiftDeadline = $shiftOpenedAt->copy()->addHours(15);
+
+            if ($clientCreatedAt->greaterThan($shiftDeadline)) {
+                $flags[] = 'shift_expired_before_transaction';
+                $status = 'accepted_flagged';
+            }
+
+            if (in_array($shift->status, ['closed', 'auto_closed'])) {
+                $flags[] = 'shift_already_closed_on_server';
+                $status = 'accepted_flagged';
+            }
         }
 
         // 2. Clock skew flag check (FSD-11)

@@ -93,7 +93,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. Users (Admin Utama Email: hiroshimajapanese@gmail.com)
-        setPermissionsTeamId(0); // Central
+        setPermissionsTeamId(null); // Central (null = no team scope for central_admin & owner)
 
         $admin = User::create([
             'name' => 'Admin Hiroshima Japanese Street Food',

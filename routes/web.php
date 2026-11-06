@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\ForgotPinController;
 use App\Http\Controllers\Web\FraudController;
 use App\Http\Controllers\Web\GeneralSettingController;
 use App\Http\Controllers\Web\IngredientController;
+use App\Http\Controllers\Web\LogMonitoringController;
 use App\Http\Controllers\Web\ModifierGroupController;
 use App\Http\Controllers\Web\OrderTypeController;
 use App\Http\Controllers\Web\PaymentMethodController;
@@ -105,6 +106,14 @@ Route::middleware('auth')->group(function () {
 
         // Audit Log Viewer & Integritas Hash Chain
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
+
+        // Log Monitoring & Diagnostik Sistem & Backup Transaksi POS
+        Route::get('/logs', [LogMonitoringController::class, 'index'])->name('logs.index');
+        Route::get('/logs/download', [LogMonitoringController::class, 'download'])->name('logs.download');
+        Route::post('/logs/clear', [LogMonitoringController::class, 'clear'])->name('logs.clear');
+        Route::get('/logs/transactions', [LogMonitoringController::class, 'transactions'])->name('logs.transactions');
+        Route::get('/logs/transactions/{id}/payload', [LogMonitoringController::class, 'transactionPayload'])->name('logs.transactions.payload');
+        Route::get('/logs/transactions-download', [LogMonitoringController::class, 'downloadTransactions'])->name('logs.transactions.download');
 
         // Pengaturan Sistem (Identitas & Branding)
         Route::get('/settings/general', [GeneralSettingController::class, 'index'])->name('settings.general');

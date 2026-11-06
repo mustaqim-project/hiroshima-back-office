@@ -10,6 +10,7 @@ use App\Models\OrderType;
 use App\Models\Setting;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\TransactionBackupLogger;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -161,6 +162,8 @@ class HoldBillService
                 'total_amount' => $order->total_amount,
                 'shift_id' => $shift->id,
             ]);
+
+            TransactionBackupLogger::record($data, $order, 'on_hold', 'hold_bill');
 
             return $order->load(['items.modifiers', 'orderType', 'user']);
         });

@@ -37,7 +37,8 @@ class AppUpdateTest extends TestCase
 
     public function test_check_update_indicates_no_update_for_equal_or_higher_build(): void
     {
-        $latestBuild = 3;
+        $meta = $this->getJson('/api/v1/app/check-update')->json();
+        $latestBuild = (int) ($meta['latest_build_number'] ?? 8);
         $response = $this->getJson('/api/v1/app/check-update?build_number=' . ($latestBuild + 1) . '&version_name=2.0.0');
 
         $response->assertStatus(200);

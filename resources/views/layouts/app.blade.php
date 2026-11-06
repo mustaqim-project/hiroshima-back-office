@@ -562,6 +562,7 @@
             <li><a href="{{ route('reports.index') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"><x-icon name="reports" size="18" /> <span>Laporan</span></a></li>
             <li><a href="{{ route('fraud.index') }}" class="nav-link {{ request()->routeIs('fraud.*') ? 'active' : '' }}"><x-icon name="fraud" size="18" /> <span>Deteksi Fraud</span></a></li>
             <li><a href="{{ route('audit.index') }}" class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}"><x-icon name="audit" size="18" /> <span>Audit Log</span></a></li>
+            <li><a href="{{ route('logs.index') }}" class="nav-link {{ request()->routeIs('logs.*') ? 'active' : '' }}"><x-icon name="terminal" size="18" /> <span>Log Monitoring</span></a></li>
 
             <li class="nav-section-label">PENGATURAN</li>
             <li><a href="{{ route('settings.general') }}" class="nav-link {{ request()->routeIs('settings.general*') ? 'active' : '' }}"><x-icon name="settings" size="18" /> <span>Pengaturan Umum</span></a></li>

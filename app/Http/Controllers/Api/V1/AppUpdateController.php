@@ -14,12 +14,12 @@ class AppUpdateController extends Controller
         $currentBuild = (int) $request->query('build_number', 0);
         $currentVersion = $request->query('version_name', '1.0.0');
 
-        $latestVersion = '1.0.6';
-        $latestBuild = 7;
+        $latestVersion = '1.0.7';
+        $latestBuild = 8;
         $downloadUrl = url('/downloads/Hiroshima.apk');
-        $changelog = "- Fitur input Nama Customer pada Open Bill (wajib)\n- Cetak Nama Customer pada Tiket Dapur Bluetooth Thermal\n- Input otomatis Nama Customer saat transaksi langsung Bayar (Quick Serve)\n- Cetak Nama Customer pada Struk Pelanggan & Bill Bayar Lunas\n- Indikator nama customer pada sidebar keranjang kasir";
-        $isMandatory = false;
-        $releaseDate = '2026-11-04';
+        $changelog = "- Perbaikan sinkronisasi offline-first otomatis anti-gagal\n- Perlindungan garansi transaksi anti-hilang (Zero Revenue Loss)\n- Auto-resolving nomor meja & shift tanpa penolakan transaksi\n- Pengamanan penyimpanan antrean offline lokal ke storage internal OS";
+        $isMandatory = true;
+        $releaseDate = '2026-11-07';
 
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('app_settings')) {

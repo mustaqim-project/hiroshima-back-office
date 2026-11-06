@@ -16,6 +16,7 @@ use App\Services\HoldBillService;
 use App\Services\OrderCalculator;
 use App\Services\PinAuthorizationService;
 use App\Services\ShiftService;
+use App\Services\TransactionBackupLogger;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -258,6 +259,8 @@ class OrderController extends Controller
 
             return $order;
         });
+
+        TransactionBackupLogger::record($validated, $order, $order->status, 'pos_api');
 
         $this->auditLogger->record('order.created', $order, [], $order->toArray());
 
