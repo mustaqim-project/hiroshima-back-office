@@ -20,12 +20,16 @@ class Payment extends Model
         'payment_method_id',
         'payment_method_name_snapshot',
         'amount',
+        'tendered_amount',
+        'change_amount',
         'reference_no',
         'paid_at',
     ];
 
     protected $casts = [
         'amount' => 'integer',
+        'tendered_amount' => 'integer',
+        'change_amount' => 'integer',
         'paid_at' => 'datetime',
     ];
 

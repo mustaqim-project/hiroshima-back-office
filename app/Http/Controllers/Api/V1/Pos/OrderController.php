@@ -230,29 +230,52 @@ class OrderController extends Controller
             }
 
             if (! empty($validated['payments'])) {
+                $orderTotal = (int) $calc['total_amount'];
                 $paidTotal = 0;
-                foreach ($validated['payments'] as $p) {
+                $remainingOrderAmount = $orderTotal;
+                $paymentsCount = count($validated['payments']);
+
+                foreach ($validated['payments'] as $idx => $p) {
                     $pmObj = !empty($p['payment_method_id']) ? PaymentMethod::find($p['payment_method_id']) : null;
                     $pmName = $p['payment_method_name'] 
                         ?? $p['payment_method_name_snapshot'] 
                         ?? $pmObj?->name 
                         ?? 'Tunai (Cash)';
 
+                    $tendered = (int) ($p['tendered_amount'] ?? $p['amount']);
+                    $isLast = ($idx === $paymentsCount - 1);
+
+                    if ($paymentsCount === 1) {
+                        $netAmount = min($tendered, $orderTotal);
+                        $changeAmount = max(0, $tendered - $netAmount);
+                    } else {
+                        $netAmount = min($tendered, max(0, $remainingOrderAmount));
+                        $changeAmount = $isLast ? max(0, $tendered - $netAmount) : 0;
+                        $remainingOrderAmount -= $netAmount;
+                    }
+
+                    if (isset($p['change_amount']) && $p['change_amount'] > 0) {
+                        $changeAmount = (int) $p['change_amount'];
+                        $netAmount = max(0, $tendered - $changeAmount);
+                    }
+
                     Payment::create([
                         'order_id' => $order->id,
                         'shift_id' => $shift->id,
                         'payment_method_id' => $p['payment_method_id'],
                         'payment_method_name_snapshot' => $pmName,
-                        'amount' => $p['amount'],
+                        'amount' => $netAmount,
+                        'tendered_amount' => $tendered,
+                        'change_amount' => $changeAmount,
                         'reference_no' => $p['reference_no'] ?? null,
                         'paid_at' => now('Asia/Jakarta'),
                     ]);
-                    $paidTotal += $p['amount'];
+                    $paidTotal += $tendered;
                 }
 
                 $order->update([
                     'paid_amount' => $paidTotal,
-                    'change_amount' => max(0, $paidTotal - $calc['total_amount']),
+                    'change_amount' => max(0, $paidTotal - $orderTotal),
                     'status' => 'completed',
                 ]);
             }

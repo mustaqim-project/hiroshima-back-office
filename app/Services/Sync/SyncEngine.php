@@ -273,7 +273,11 @@ class SyncEngine
 
                     // Payments
                     if (! empty($item['payments'])) {
-                        foreach ($item['payments'] as $paymentData) {
+                        $orderTotal = (int) $order->total_amount;
+                        $remainingOrderAmount = $orderTotal;
+                        $paymentsCount = count($item['payments']);
+
+                        foreach ($item['payments'] as $idx => $paymentData) {
                             $pmId = $paymentData['payment_method_id'] ?? null;
                             if ($pmId && !PaymentMethod::where('id', $pmId)->exists()) {
                                 $pmId = null;
@@ -290,12 +294,31 @@ class SyncEngine
                                 ?? $pmObj?->name 
                                 ?? 'Tunai (Cash)';
 
+                            $tendered = (int) ($paymentData['tendered_amount'] ?? $paymentData['amount'] ?? $orderTotal);
+                            $isLast = ($idx === $paymentsCount - 1);
+
+                            if ($paymentsCount === 1) {
+                                $netAmount = min($tendered, $orderTotal);
+                                $changeAmount = max(0, $tendered - $netAmount);
+                            } else {
+                                $netAmount = min($tendered, max(0, $remainingOrderAmount));
+                                $changeAmount = $isLast ? max(0, $tendered - $netAmount) : 0;
+                                $remainingOrderAmount -= $netAmount;
+                            }
+
+                            if (isset($paymentData['change_amount']) && $paymentData['change_amount'] > 0) {
+                                $changeAmount = (int) $paymentData['change_amount'];
+                                $netAmount = max(0, $tendered - $changeAmount);
+                            }
+
                             Payment::create([
                                 'order_id' => $order->id,
                                 'shift_id' => $shiftId,
                                 'payment_method_id' => $pmId,
                                 'payment_method_name_snapshot' => $pmName,
-                                'amount' => $paymentData['amount'] ?? $order->total_amount,
+                                'amount' => $netAmount,
+                                'tendered_amount' => $tendered,
+                                'change_amount' => $changeAmount,
                                 'reference_no' => $paymentData['reference_no'] ?? null,
                                 'paid_at' => $clientCreatedAt,
                             ]);

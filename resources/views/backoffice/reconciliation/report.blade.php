@@ -235,8 +235,10 @@
             <thead>
                 <tr>
                     <th>Metode Pembayaran</th>
-                    <th class="text-center" style="width: 120px;">Frekuensi</th>
-                    <th class="text-right" style="width: 180px;">Total Diterima</th>
+                    <th class="text-center" style="width: 100px;">Frekuensi</th>
+                    <th class="text-right" style="width: 150px;">Total Diterima</th>
+                    <th class="text-right" style="width: 140px;">Kembalian</th>
+                    <th class="text-right" style="width: 160px;">Total Bersih (Net)</th>
                 </tr>
             </thead>
             <tbody>
@@ -244,14 +246,28 @@
                     <tr>
                         <td style="font-weight: 600;">{{ $pay['name'] }}</td>
                         <td class="text-center">{{ $pay['tx_count'] }} kali</td>
-                        <td class="text-right">Rp {{ number_format($pay['total_amount'], 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format($pay['tendered_amount'] ?? $pay['total_amount'], 0, ',', '.') }}</td>
+                        <td class="text-right" style="color: {{ ($pay['change_amount'] ?? 0) > 0 ? 'var(--danger)' : 'var(--text-muted)' }};">
+                            {{ ($pay['change_amount'] ?? 0) > 0 ? '- Rp ' . number_format($pay['change_amount'], 0, ',', '.') : 'Rp 0' }}
+                        </td>
+                        <td class="text-right" style="font-weight: 700; color: var(--primary);">Rp {{ number_format($pay['total_amount'], 0, ',', '.') }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="text-center" style="color: var(--text-muted);">Tidak ada transaksi pembayaran tercatat.</td>
+                        <td colspan="5" class="text-center" style="color: var(--text-muted);">Tidak ada transaksi pembayaran tercatat.</td>
                     </tr>
                 @endforelse
             </tbody>
+            @if(!empty($report['transaction_summary']['payments_by_method']))
+            <tfoot>
+                <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <td colspan="2" style="font-size: 14px; text-transform: uppercase;">TOTAL PEMBAYARAN</td>
+                    <td class="text-right" style="font-size: 14px;">Rp {{ number_format(array_sum(array_column($report['transaction_summary']['payments_by_method'], 'tendered_amount')), 0, ',', '.') }}</td>
+                    <td class="text-right" style="font-size: 14px; color: var(--danger);">- Rp {{ number_format(array_sum(array_column($report['transaction_summary']['payments_by_method'], 'change_amount')), 0, ',', '.') }}</td>
+                    <td class="text-right" style="font-size: 14px; color: var(--primary);">Rp {{ number_format(array_sum(array_column($report['transaction_summary']['payments_by_method'], 'total_amount')), 0, ',', '.') }}</td>
+                </tr>
+            </tfoot>
+            @endif
         </table>
 
         <!-- Rekonsiliasi Kas Laci -->

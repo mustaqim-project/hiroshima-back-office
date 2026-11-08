@@ -774,4 +774,79 @@ class PosShiftAndHoldBillTest extends TestCase
         $closed = $this->shiftService->close($shift, 5800000);
         $this->assertEquals('closed', $closed->status);
     }
+
+    public function test_cash_payment_with_change_recorded_accurately_in_shift_reconciliation_report(): void
+    {
+        // 1. Open shift with starting cash Rp 100.000
+        $shift = $this->shiftService->open($this->branch->id, $this->cashier->id, null, 100000);
+
+        // 2. Order: Total Rp 64.000 (tax inclusive or unit_price 64000)
+        // Assume unit_price 64000, but branch might have tax/service so calculate accordingly or disable tax
+        $this->branch->update(['tax_percent' => 0, 'service_charge_percent' => 0, 'rounding_mode' => 'none']);
+
+        $token = $this->cashier->createToken('test-token')->plainTextToken;
+
+        // Customer buys Rp 64.000, pays Rp 100.000 cash, change Rp 36.000
+        $resp = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/v1/orders', [
+                'shift_id' => $shift->id,
+                'order_type_id' => $this->orderType->id,
+                'items' => [
+                    [
+                        'product_id' => $this->productA->id,
+                        'product_name' => $this->productA->name,
+                        'quantity' => 1,
+                        'unit_price' => 64000,
+                    ],
+                ],
+                'payments' => [
+                    [
+                        'payment_method_id' => $this->cashMethod->id,
+                        'payment_method_name' => 'Tunai (Cash)',
+                        'amount' => 100000, // Cashier inputs Rp 100.000 tendered
+                    ],
+                ],
+            ]);
+
+        $resp->assertStatus(201);
+        $orderId = $resp->json('order.id');
+
+        $order = \App\Models\Order::with('payments')->find($orderId);
+        $this->assertEquals(64000, $order->total_amount);
+        $this->assertEquals(100000, $order->paid_amount);
+        $this->assertEquals(36000, $order->change_amount);
+
+        // Verify payment record
+        $payment = $order->payments->first();
+        $this->assertEquals(64000, $payment->amount, 'Payment net amount must match order total');
+        $this->assertEquals(100000, $payment->tendered_amount, 'Tendered amount must be recorded as 100.000');
+        $this->assertEquals(36000, $payment->change_amount, 'Change amount must be recorded as 36.000');
+
+        // Verify ShiftService Expected Cash (Modal 100.000 + Net Cash 64.000 = 164.000)
+        $expectedCash = $this->shiftService->calculateExpectedCash($shift);
+        $this->assertEquals(164000, $expectedCash, 'Expected cash must be modal awal (100.000) + net sales (64.000)');
+
+        // Verify Shift Reconciliation Report
+        $report = $this->shiftService->generateCloseShiftReport($shift);
+        $this->assertEquals(64000, $report['transaction_summary']['net_sales']);
+
+        $paymentsByMethod = $report['transaction_summary']['payments_by_method'];
+        $this->assertCount(1, $paymentsByMethod);
+        $this->assertEquals('Tunai (Cash)', $paymentsByMethod[0]['name']);
+        $this->assertEquals(64000, $paymentsByMethod[0]['total_amount'], 'Payment method breakdown net amount must be Rp 64.000');
+        $this->assertEquals(100000, $paymentsByMethod[0]['tendered_amount'], 'Tendered amount must be Rp 100.000');
+        $this->assertEquals(36000, $paymentsByMethod[0]['change_amount'], 'Change amount must be Rp 36.000');
+
+        // Verify Web Report View (https://hiroshima.web.id/backoffice/reconciliation/{shift}/report)
+        $this->actingAs($this->cashier);
+        $viewRes = $this->get(route('reconciliation.report', $shift->id));
+        $viewRes->assertStatus(200);
+        $viewRes->assertSee('Rincian Pembayaran per Metode');
+        $viewRes->assertSee('Total Diterima');
+        $viewRes->assertSee('Kembalian');
+        $viewRes->assertSee('Total Bersih (Net)');
+        $viewRes->assertSee('100.000');
+        $viewRes->assertSee('36.000');
+        $viewRes->assertSee('64.000');
+    }
 }

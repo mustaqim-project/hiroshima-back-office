@@ -121,8 +121,8 @@ class ShiftService
      */
     public function calculateExpectedCash(Shift $shift): int
     {
-        // 1. Total seluruh pembayaran tunai fisik yang diterima ke laci pada shift ini
-        $cashReceived = Payment::where('shift_id', $shift->id)
+        // 1. Total seluruh pembayaran tunai fisik yang diterima ke laci pada shift ini (bersih setelah dikurangi kembalian)
+        $cashPayments = Payment::where('shift_id', $shift->id)
             ->where(function ($query) {
                 $query->whereHas('paymentMethod', fn ($q) => $q->where('is_cash', true))
                     ->orWhere(function ($q) {
@@ -133,7 +133,18 @@ class ShiftService
                             });
                     });
             })
-            ->sum('amount');
+            ->with('order')
+            ->get();
+
+        $cashReceived = $cashPayments->sum(function ($p) {
+            if (!empty($p->change_amount) && !empty($p->tendered_amount)) {
+                return (int) $p->amount;
+            }
+            if ($p->order && $p->order->change_amount > 0 && (int)$p->amount === (int)$p->order->paid_amount) {
+                return max(0, (int)$p->amount - (int)$p->order->change_amount);
+            }
+            return (int) $p->amount;
+        });
 
         // 2. Total uang tunai fisik yang dikeluarkan dari laci sebagai refund pelanggan pada shift ini
         $cashRefunds = Refund::where('shift_id', $shift->id)
@@ -374,21 +385,49 @@ class ShiftService
         $voidAmount = (int) $voidedOrders->sum('total_amount');
 
         // Payments Breakdown by Method
-        $paymentsByMethod = Payment::where('shift_id', $shift->id)
+        $payments = Payment::where('shift_id', $shift->id)
             ->whereHas('order', fn ($q) => $q->where('status', 'completed'))
-            ->select(
-                'payment_method_name_snapshot',
-                DB::raw('COUNT(*) as tx_count'),
-                DB::raw('SUM(amount) as total_amount')
-            )
-            ->groupBy('payment_method_name_snapshot')
-            ->get()
-            ->map(fn ($p) => [
-                'name' => $p->payment_method_name_snapshot,
-                'tx_count' => (int) $p->tx_count,
-                'total_amount' => (int) $p->total_amount,
-            ])
-            ->toArray();
+            ->with('order')
+            ->get();
+
+        $groupedPayments = $payments->groupBy('payment_method_name_snapshot');
+
+        $paymentsByMethod = [];
+        foreach ($groupedPayments as $name => $items) {
+            $txCount = $items->count();
+            $netAmount = 0;
+            $tenderedAmount = 0;
+            $changeAmount = 0;
+
+            foreach ($items as $p) {
+                $tendered = $p->tendered_amount ?? $p->amount;
+                $change = $p->change_amount ?? 0;
+
+                // Backward compatibility if old record had amount = paid_amount
+                if ($change == 0 && $p->order && $p->order->change_amount > 0 && (int)$p->amount === (int)$p->order->paid_amount) {
+                    $tendered = (int) $p->order->paid_amount;
+                    $change = (int) $p->order->change_amount;
+                    $net = (int) $p->order->total_amount;
+                } else {
+                    $net = (int) $p->amount;
+                    if ($tendered == $net && $change > 0) {
+                        $tendered = $net + $change;
+                    }
+                }
+
+                $netAmount += $net;
+                $tenderedAmount += $tendered;
+                $changeAmount += $change;
+            }
+
+            $paymentsByMethod[] = [
+                'name' => $name,
+                'tx_count' => $txCount,
+                'total_amount' => $netAmount,
+                'tendered_amount' => $tenderedAmount,
+                'change_amount' => $changeAmount,
+            ];
+        }
 
         // Cash Reconciliation
         $startingCash = (int) $shift->starting_cash;

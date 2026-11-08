@@ -477,7 +477,7 @@ class PosApiAndLifecycleTest extends TestCase
         $this->assertEquals('voided', $order->status);
         $this->assertEquals('Pelanggan membatalkan pesanan karena salah pilih meja', $order->void_reason);
         $this->assertCount(1, $order->refunds);
-        $this->assertEquals(120000, $order->refunds->first()->amount);
+        $this->assertEquals(113200, $order->refunds->first()->amount);
     }
 
     public function test_api_sync_pull_and_push_idempotent(): void

@@ -684,7 +684,7 @@ class ReportExcelService
             DB::raw('COALESCE(payments.payment_method_name_snapshot, payment_methods.name, "Tunai") as method_name'),
             DB::raw('COALESCE(payment_methods.type, "cash") as method_type'),
             DB::raw('COUNT(payments.id) as tx_count'),
-            DB::raw('SUM(payments.amount) as total_amount')
+            DB::raw('SUM(CASE WHEN COALESCE(payments.change_amount, 0) > 0 THEN payments.amount WHEN orders.change_amount > 0 AND payments.amount = orders.paid_amount THEN orders.total_amount ELSE payments.amount END) as total_amount')
         )
             ->groupBy('payments.payment_method_name_snapshot', 'payment_methods.name', 'payment_methods.type')
             ->orderBy('total_amount', 'desc')
