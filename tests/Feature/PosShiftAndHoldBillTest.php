@@ -849,4 +849,64 @@ class PosShiftAndHoldBillTest extends TestCase
         $viewRes->assertSee('36.000');
         $viewRes->assertSee('64.000');
     }
+
+    public function test_artisan_repair_payments_command_fixes_legacy_shift_data(): void
+    {
+        $shift = $this->shiftService->open($this->branch->id, $this->cashier->id, null, 100000);
+
+        // Simulate legacy unmigrated order & payment record
+        $order = \App\Models\Order::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'order_no' => 'HRS-POS-LEGACY-001',
+            'branch_id' => $this->branch->id,
+            'shift_id' => $shift->id,
+            'user_id' => $this->cashier->id,
+            'order_type_id' => $this->orderType->id,
+            'status' => 'completed',
+            'business_date' => now('Asia/Jakarta')->toDateString(),
+            'subtotal' => 64000,
+            'total_amount' => 64000,
+            'paid_amount' => 100000,
+            'change_amount' => 36000,
+            'client_created_at' => now('Asia/Jakarta'),
+        ]);
+
+        $payment = \App\Models\Payment::create([
+            'order_id' => $order->id,
+            'shift_id' => $shift->id,
+            'payment_method_id' => $this->cashMethod->id,
+            'payment_method_name_snapshot' => 'Tunai (Cash)',
+            'amount' => 100000, // Legacy bug: stored 100.000 instead of 64.000
+            'tendered_amount' => null,
+            'change_amount' => 0,
+            'paid_at' => now('Asia/Jakarta'),
+        ]);
+
+        // Close shift with legacy incorrect expected cash
+        $shift->update([
+            'status' => 'closed',
+            'closed_at' => now('Asia/Jakarta'),
+            'expected_cash' => 200000, // 100.000 starting + 100.000 flawed cash
+            'actual_cash' => 164000,
+            'cash_difference' => -36000, // False discrepancy of -36.000
+        ]);
+
+        // Run artisan repair command
+        $exitCode = \Illuminate\Support\Facades\Artisan::call('pos:repair-payments', [
+            '--shift' => (string) $shift->id,
+        ]);
+
+        $this->assertEquals(0, $exitCode);
+
+        // Verify payment is corrected
+        $payment->refresh();
+        $this->assertEquals(64000, $payment->amount);
+        $this->assertEquals(100000, $payment->tendered_amount);
+        $this->assertEquals(36000, $payment->change_amount);
+
+        // Verify shift expected cash and difference are corrected
+        $shift->refresh();
+        $this->assertEquals(164000, $shift->expected_cash, 'Expected cash must be corrected to 164.000');
+        $this->assertEquals(0, $shift->cash_difference, 'Cash difference must now be 0 (Pas)');
+    }
 }
